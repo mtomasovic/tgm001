@@ -1,11 +1,34 @@
 // Simple Canvas Game (fallback if p5.js doesn't work)
 function createCanvasGame() {
     const canvas = document.createElement('canvas');
-    canvas.width = 800;
-    canvas.height = 600;
+    
+    // Calculate responsive canvas size
+    function calculateCanvasSize() {
+        const maxWidth = Math.min(800, window.innerWidth - 40); // 20px padding on each side
+        const maxHeight = Math.min(600, window.innerHeight - 200); // Leave space for controls and UI
+        
+        // Maintain aspect ratio (4:3)
+        const aspectRatio = 4 / 3;
+        let canvasWidth = maxWidth;
+        let canvasHeight = canvasWidth / aspectRatio;
+        
+        if (canvasHeight > maxHeight) {
+            canvasHeight = maxHeight;
+            canvasWidth = canvasHeight * aspectRatio;
+        }
+        
+        return { width: canvasWidth, height: canvasHeight };
+    }
+    
+    const canvasSize = calculateCanvasSize();
+    canvas.width = canvasSize.width;
+    canvas.height = canvasSize.height;
+    
     canvas.style.border = '2px solid #333';
     canvas.style.borderRadius = '8px';
     canvas.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
+    canvas.style.maxWidth = '100%';
+    canvas.style.height = 'auto';
     
     const container = document.getElementById('game-container');
     if (container) {
@@ -14,32 +37,41 @@ function createCanvasGame() {
     
     const ctx = canvas.getContext('2d');
     
+    // Scale factor for responsive design
+    const scaleX = canvas.width / 800;
+    const scaleY = canvas.height / 600;
+    
+    // Create virtual gamepad
+    const gamepad = new VirtualGamepad();
+    
     // Game state
     const game = {
         player: {
-            x: 50,
-            y: 100,
+            x: 50 * scaleX,
+            y: 100 * scaleY,
             vx: 0,
             vy: 0,
-            width: 20,
-            height: 40,
-            speed: 5,
-            jumpPower: 12,
+            width: 20 * scaleX,
+            height: 40 * scaleY,
+            speed: 5 * scaleX,
+            jumpPower: 12 * scaleY,
             onGround: false,
             facing: 1
         },
         platforms: [
-            {x: 0, y: 580, width: 800, height: 20, color: '#8B4513'}, // ground
-            {x: 150, y: 520, width: 100, height: 20, color: '#009600'}, // first platform
-            {x: 300, y: 460, width: 80, height: 20, color: '#009600'}, // second platform
-            {x: 450, y: 400, width: 100, height: 20, color: '#009600'}, // third platform
-            {x: 600, y: 480, width: 80, height: 20, color: '#009600'}, // fourth platform
-            {x: 200, y: 420, width: 60, height: 20, color: '#960000'}, // red obstacle
-            {x: 380, y: 340, width: 60, height: 20, color: '#960000'}, // red obstacle
-            {x: 700, y: 420, width: 80, height: 20, color: '#FFD700'}, // goal platform
+            {x: 0, y: canvas.height - 20 * scaleY, width: canvas.width, height: 20 * scaleY, color: '#8B4513'}, // ground
+            {x: 150 * scaleX, y: canvas.height - 80 * scaleY, width: 100 * scaleX, height: 20 * scaleY, color: '#009600'}, // first platform
+            {x: 300 * scaleX, y: canvas.height - 140 * scaleY, width: 80 * scaleX, height: 20 * scaleY, color: '#009600'}, // second platform
+            {x: 450 * scaleX, y: canvas.height - 200 * scaleY, width: 100 * scaleX, height: 20 * scaleY, color: '#009600'}, // third platform
+            {x: 600 * scaleX, y: canvas.height - 120 * scaleY, width: 80 * scaleX, height: 20 * scaleY, color: '#009600'}, // fourth platform
+            {x: 200 * scaleX, y: canvas.height - 180 * scaleY, width: 60 * scaleX, height: 20 * scaleY, color: '#960000'}, // red obstacle
+            {x: 380 * scaleX, y: canvas.height - 260 * scaleY, width: 60 * scaleX, height: 20 * scaleY, color: '#960000'}, // red obstacle
+            {x: 700 * scaleX, y: canvas.height - 180 * scaleY, width: 80 * scaleX, height: 20 * scaleY, color: '#FFD700'}, // goal platform
         ],
         keys: {},
-        frameCount: 0
+        frameCount: 0,
+        scaleX: scaleX,
+        scaleY: scaleY
     };
     
     // Input handling
@@ -62,24 +94,28 @@ function createCanvasGame() {
     function updatePlayer() {
         const p = game.player;
         
+        // Merge keyboard and gamepad inputs
+        const gamepadKeys = gamepad.getKeys();
+        const allKeys = { ...game.keys, ...gamepadKeys };
+        
         // Handle input
-        if (game.keys['ArrowLeft'] || game.keys['a'] || game.keys['A'] || game.keys['KeyA']) {
+        if (allKeys['ArrowLeft'] || allKeys['a'] || allKeys['A'] || allKeys['KeyA']) {
             p.vx = -p.speed;
             p.facing = -1;
-        } else if (game.keys['ArrowRight'] || game.keys['d'] || game.keys['D'] || game.keys['KeyD']) {
+        } else if (allKeys['ArrowRight'] || allKeys['d'] || allKeys['D'] || allKeys['KeyD']) {
             p.vx = p.speed;
             p.facing = 1;
         } else {
             p.vx *= 0.8; // friction
         }
         
-        if ((game.keys['ArrowUp'] || game.keys['w'] || game.keys['W'] || game.keys['KeyW'] || game.keys[' ']) && p.onGround) {
+        if ((allKeys['ArrowUp'] || allKeys['w'] || allKeys['W'] || allKeys['KeyW'] || allKeys[' ']) && p.onGround) {
             p.vy = -p.jumpPower;
             p.onGround = false;
         }
         
         // Apply gravity
-        p.vy += 0.5;
+        p.vy += 0.5 * game.scaleY;
         
         // Update position
         p.x += p.vx;
@@ -120,8 +156,8 @@ function createCanvasGame() {
         if (p.x > canvas.width - p.width) p.x = canvas.width - p.width;
         if (p.y > canvas.height) {
             // Respawn
-            p.x = 50;
-            p.y = 100;
+            p.x = 50 * game.scaleX;
+            p.y = 100 * game.scaleY;
             p.vx = 0;
             p.vy = 0;
         }
@@ -133,37 +169,37 @@ function createCanvasGame() {
         ctx.translate(p.x + p.width/2, p.y);
         ctx.scale(p.facing, 1);
         
-        // Draw stickman
+        // Draw stickman (scaled)
         ctx.strokeStyle = '#000';
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 3 * game.scaleX;
         ctx.lineCap = 'round';
         
         // Head
         ctx.fillStyle = '#FFDC80';
         ctx.beginPath();
-        ctx.arc(0, 10, 8, 0, Math.PI * 2);
+        ctx.arc(0, 10 * game.scaleY, 8 * game.scaleX, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
         
         // Body
         ctx.beginPath();
-        ctx.moveTo(0, 18);
-        ctx.lineTo(0, 30);
+        ctx.moveTo(0, 18 * game.scaleY);
+        ctx.lineTo(0, 30 * game.scaleY);
         ctx.stroke();
         
         // Arms (animated based on movement)
         let armSwing = Math.sin(game.frameCount * 0.3) * 0.3;
         ctx.beginPath();
         if (Math.abs(p.vx) > 0.1) {
-            ctx.moveTo(0, 22);
-            ctx.lineTo(-8 + armSwing * 8, 28);
-            ctx.moveTo(0, 22);
-            ctx.lineTo(8 - armSwing * 8, 28);
+            ctx.moveTo(0, 22 * game.scaleY);
+            ctx.lineTo((-8 + armSwing * 8) * game.scaleX, 28 * game.scaleY);
+            ctx.moveTo(0, 22 * game.scaleY);
+            ctx.lineTo((8 - armSwing * 8) * game.scaleX, 28 * game.scaleY);
         } else {
-            ctx.moveTo(0, 22);
-            ctx.lineTo(-6, 28);
-            ctx.moveTo(0, 22);
-            ctx.lineTo(6, 28);
+            ctx.moveTo(0, 22 * game.scaleY);
+            ctx.lineTo(-6 * game.scaleX, 28 * game.scaleY);
+            ctx.moveTo(0, 22 * game.scaleY);
+            ctx.lineTo(6 * game.scaleX, 28 * game.scaleY);
         }
         ctx.stroke();
         
@@ -171,23 +207,23 @@ function createCanvasGame() {
         let legSwing = Math.sin(game.frameCount * 0.4) * 0.4;
         ctx.beginPath();
         if (Math.abs(p.vx) > 0.1 && p.onGround) {
-            ctx.moveTo(0, 30);
-            ctx.lineTo(-6 + legSwing * 6, 40);
-            ctx.moveTo(0, 30);
-            ctx.lineTo(6 - legSwing * 6, 40);
+            ctx.moveTo(0, 30 * game.scaleY);
+            ctx.lineTo((-6 + legSwing * 6) * game.scaleX, 40 * game.scaleY);
+            ctx.moveTo(0, 30 * game.scaleY);
+            ctx.lineTo((6 - legSwing * 6) * game.scaleX, 40 * game.scaleY);
         } else {
-            ctx.moveTo(0, 30);
-            ctx.lineTo(-4, 40);
-            ctx.moveTo(0, 30);
-            ctx.lineTo(4, 40);
+            ctx.moveTo(0, 30 * game.scaleY);
+            ctx.lineTo(-4 * game.scaleX, 40 * game.scaleY);
+            ctx.moveTo(0, 30 * game.scaleY);
+            ctx.lineTo(4 * game.scaleX, 40 * game.scaleY);
         }
         ctx.stroke();
         
         // Eyes
         ctx.fillStyle = '#000';
         ctx.beginPath();
-        ctx.arc(-3, 8, 1, 0, Math.PI * 2);
-        ctx.arc(3, 8, 1, 0, Math.PI * 2);
+        ctx.arc(-3 * game.scaleX, 8 * game.scaleY, 1 * game.scaleX, 0, Math.PI * 2);
+        ctx.arc(3 * game.scaleX, 8 * game.scaleY, 1 * game.scaleX, 0, Math.PI * 2);
         ctx.fill();
         
         ctx.restore();
@@ -197,7 +233,7 @@ function createCanvasGame() {
         for (let platform of game.platforms) {
             ctx.fillStyle = platform.color;
             ctx.strokeStyle = '#000';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 2 * game.scaleX;
             ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
             ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
         }
@@ -215,18 +251,13 @@ function createCanvasGame() {
         updatePlayer();
         drawStickman();
         
-        // Draw instructions
-        ctx.fillStyle = '#000';
-        ctx.font = '16px Arial';
-        ctx.fillText('Use ARROW KEYS or WASD to move and jump!', 10, 30);
-        ctx.fillText('Navigate the obstacle course to reach the golden platform!', 10, 50);
-        
         // Draw goal message if player reaches the end
-        if (game.player.x > 700 && game.player.y < canvas.height - 200) {
+        if (game.player.x > 700 * game.scaleX && game.player.y < canvas.height - 200 * game.scaleY) {
             ctx.fillStyle = '#FFD700';
             ctx.strokeStyle = '#000';
-            ctx.lineWidth = 2;
-            ctx.font = '32px Arial';
+            ctx.lineWidth = 2 * game.scaleX;
+            const goalFontSize = Math.max(20, 32 * Math.min(game.scaleX, game.scaleY));
+            ctx.font = `${goalFontSize}px Arial`;
             ctx.textAlign = 'center';
             ctx.fillText('GOAL REACHED!', canvas.width/2, canvas.height/2);
             ctx.strokeText('GOAL REACHED!', canvas.width/2, canvas.height/2);
@@ -244,6 +275,7 @@ function createCanvasGame() {
     return () => {
         document.removeEventListener('keydown', handleKeyDown);
         document.removeEventListener('keyup', handleKeyUp);
+        gamepad.destroy(); // Clean up virtual gamepad
         if (canvas.parentNode) {
             canvas.parentNode.removeChild(canvas);
         }
@@ -255,6 +287,10 @@ function createGame() {
     // Check if p5 is available
     if (typeof p5 !== 'undefined') {
         console.log('Using p5.js');
+        
+        // Create virtual gamepad for p5.js version too
+        const gamepad = new VirtualGamepad();
+        
         // Previous p5.js code here...
         const sketch = (p) => {
             let player;
@@ -276,22 +312,27 @@ function createGame() {
                 }
                 
                 update() {
-                    if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
+                    // Merge keyboard and gamepad inputs
+                    const gamepadKeys = gamepad.getKeys();
+                    const allKeys = { ...keys, ...gamepadKeys };
+                    
+                    if (allKeys['ArrowLeft'] || allKeys['a'] || allKeys['A']) {
                         this.vx = -this.speed;
                         this.facing = -1;
-                    } else if (keys['ArrowRight'] || keys['d'] || keys['D']) {
+                    } else if (allKeys['ArrowRight'] || allKeys['d'] || allKeys['D']) {
                         this.vx = this.speed;
                         this.facing = 1;
                     } else {
                         this.vx *= 0.8;
                     }
                     
-                    if ((keys['ArrowUp'] || keys['w'] || keys['W'] || keys[' ']) && this.onGround) {
+                    if ((allKeys['ArrowUp'] || allKeys['w'] || allKeys['W'] || allKeys[' ']) && this.onGround) {
                         this.vy = -this.jumpPower;
                         this.onGround = false;
                     }
                     
-                    this.vy += 0.5;
+                    // Use scaled gravity
+                    this.vy += 0.5 * (window.p5ScaleY || 1);
                     this.x += this.vx;
                     this.y += this.vy;
                     
@@ -313,8 +354,9 @@ function createGame() {
                     if (this.x < 0) this.x = 0;
                     if (this.x > p.width - this.width) this.x = p.width - this.width;
                     if (this.y > p.height) {
-                        this.x = 50;
-                        this.y = 100;
+                        // Use scaled respawn position
+                        this.x = 50 * (window.p5ScaleX || 1);
+                        this.y = 100 * (window.p5ScaleY || 1);
                         this.vx = 0;
                         this.vy = 0;
                     }
@@ -378,16 +420,43 @@ function createGame() {
             }
             
             p.setup = () => {
-                p.createCanvas(800, 600);
-                player = new Player(50, 100);
+                // Calculate responsive canvas size
+                const maxWidth = Math.min(800, window.innerWidth - 40);
+                const maxHeight = Math.min(600, window.innerHeight - 200);
+                
+                const aspectRatio = 4 / 3;
+                let canvasWidth = maxWidth;
+                let canvasHeight = canvasWidth / aspectRatio;
+                
+                if (canvasHeight > maxHeight) {
+                    canvasHeight = maxHeight;
+                    canvasWidth = canvasHeight * aspectRatio;
+                }
+                
+                p.createCanvas(canvasWidth, canvasHeight);
+                
+                // Scale factors
+                const scaleX = canvasWidth / 800;
+                const scaleY = canvasHeight / 600;
+                
+                player = new Player(50 * scaleX, 100 * scaleY);
+                player.width = 20 * scaleX;
+                player.height = 40 * scaleY;
+                player.speed = 5 * scaleX;
+                player.jumpPower = 12 * scaleY;
+                
                 platforms = [
-                    new Platform(0, p.height - 20, p.width, 20, [139, 69, 19]),
-                    new Platform(150, p.height - 80, 100, 20, [0, 150, 0]),
-                    new Platform(300, p.height - 140, 80, 20, [0, 150, 0]),
-                    new Platform(450, p.height - 200, 100, 20, [0, 150, 0]),
-                    new Platform(600, p.height - 120, 80, 20, [0, 150, 0]),
-                    new Platform(700, p.height - 180, 80, 20, [255, 215, 0]),
+                    new Platform(0, p.height - 20 * scaleY, p.width, 20 * scaleY, [139, 69, 19]),
+                    new Platform(150 * scaleX, p.height - 80 * scaleY, 100 * scaleX, 20 * scaleY, [0, 150, 0]),
+                    new Platform(300 * scaleX, p.height - 140 * scaleY, 80 * scaleX, 20 * scaleY, [0, 150, 0]),
+                    new Platform(450 * scaleX, p.height - 200 * scaleY, 100 * scaleX, 20 * scaleY, [0, 150, 0]),
+                    new Platform(600 * scaleX, p.height - 120 * scaleY, 80 * scaleX, 20 * scaleY, [0, 150, 0]),
+                    new Platform(700 * scaleX, p.height - 180 * scaleY, 80 * scaleX, 20 * scaleY, [255, 215, 0]),
                 ];
+                
+                // Store scale factors globally for p5.js version
+                window.p5ScaleX = scaleX;
+                window.p5ScaleY = scaleY;
             };
             
             p.draw = () => {
@@ -399,10 +468,6 @@ function createGame() {
                 
                 player.update();
                 player.draw();
-                
-                p.fill(0);
-                p.textSize(16);
-                p.text('Use ARROW KEYS or WASD to move and jump!', 10, 30);
             };
             
             p.keyPressed = () => {
@@ -416,10 +481,191 @@ function createGame() {
             };
         };
         
-        return new p5(sketch, 'game-container');
+        const p5Instance = new p5(sketch, 'game-container');
+        
+        // Return object with cleanup function that includes gamepad
+        return {
+            remove: () => {
+                gamepad.destroy();
+                p5Instance.remove();
+            }
+        };
     } else {
         console.log('p5.js not available, using Canvas fallback');
         return createCanvasGame();
+    }
+}
+
+class VirtualGamepad {
+    constructor() {
+        this.keys = {};
+        this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        this.touchStartTime = 0;
+        this.createGamepad();
+    }
+    
+    createGamepad() {
+        if (!this.isMobile) return;
+        
+        // Create gamepad container
+        this.container = document.createElement('div');
+        this.container.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            height: 120px;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding: 0 20px;
+            pointer-events: none;
+        `;
+        
+        // Left side - D-pad
+        this.createDPad();
+        
+        // Right side - Action buttons
+        this.createActionButtons();
+        
+        document.body.appendChild(this.container);
+    }
+    
+    createDPad() {
+        const dpadContainer = document.createElement('div');
+        dpadContainer.style.cssText = `
+            position: relative;
+            width: 100px;
+            height: 100px;
+            pointer-events: auto;
+        `;
+        
+        // D-pad center
+        const center = document.createElement('div');
+        center.style.cssText = `
+            position: absolute;
+            top: 33px;
+            left: 33px;
+            width: 34px;
+            height: 34px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 50%;
+        `;
+        
+        // Left arrow
+        const leftBtn = this.createDPadButton('◀', '0px', '33px', 'ArrowLeft');
+        // Right arrow  
+        const rightBtn = this.createDPadButton('▶', '66px', '33px', 'ArrowRight');
+        // Up arrow
+        const upBtn = this.createDPadButton('▲', '33px', '0px', 'ArrowUp');
+        
+        dpadContainer.appendChild(center);
+        dpadContainer.appendChild(leftBtn);
+        dpadContainer.appendChild(rightBtn);
+        dpadContainer.appendChild(upBtn);
+        
+        this.container.appendChild(dpadContainer);
+    }
+    
+    createDPadButton(symbol, left, top, key) {
+        const btn = document.createElement('div');
+        btn.style.cssText = `
+            position: absolute;
+            left: ${left};
+            top: ${top};
+            width: 34px;
+            height: 34px;
+            background: rgba(255,255,255,0.8);
+            border: 2px solid rgba(0,0,0,0.3);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: bold;
+            user-select: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: all 0.1s;
+        `;
+        btn.textContent = symbol;
+        
+        // Touch events
+        btn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            btn.style.background = 'rgba(100,150,255,0.8)';
+            btn.style.transform = 'scale(0.95)';
+            this.keys[key] = true;
+        });
+        
+        btn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            btn.style.background = 'rgba(255,255,255,0.8)';
+            btn.style.transform = 'scale(1)';
+            this.keys[key] = false;
+        });
+        
+        return btn;
+    }
+    
+    createActionButtons() {
+        const actionContainer = document.createElement('div');
+        actionContainer.style.cssText = `
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: auto;
+        `;
+        
+        // Jump button (primary)
+        const jumpBtn = document.createElement('div');
+        jumpBtn.style.cssText = `
+            width: 60px;
+            height: 60px;
+            background: rgba(0,200,0,0.8);
+            border: 3px solid rgba(0,0,0,0.3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: bold;
+            color: white;
+            user-select: none;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+            transition: all 0.1s;
+        `;
+        jumpBtn.textContent = '🦘';
+        
+        // Jump button events
+        jumpBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            jumpBtn.style.background = 'rgba(0,255,0,0.9)';
+            jumpBtn.style.transform = 'scale(0.9)';
+            this.keys['ArrowUp'] = true;
+            this.keys[' '] = true;
+        });
+        
+        jumpBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            jumpBtn.style.background = 'rgba(0,200,0,0.8)';
+            jumpBtn.style.transform = 'scale(1)';
+            this.keys['ArrowUp'] = false;
+            this.keys[' '] = false;
+        });
+        
+        actionContainer.appendChild(jumpBtn);
+        this.container.appendChild(actionContainer);
+    }
+    
+    getKeys() {
+        return this.keys;
+    }
+    
+    destroy() {
+        if (this.container && this.container.parentNode) {
+            this.container.parentNode.removeChild(this.container);
+        }
     }
 }
 
@@ -462,31 +708,17 @@ function App() {
             alignItems: 'center', 
             minHeight: '100vh',
             fontFamily: 'Arial, sans-serif',
-            padding: '20px'
+            padding: '10px',
+            boxSizing: 'border-box'
         }}>
-            <h1 style={{ 
-                fontSize: '36px', 
-                color: '#333',
-                textAlign: 'center',
-                marginBottom: '20px'
-            }}>
-                Stickman Platformer
-            </h1>
             <div id="game-container" style={{
                 border: '2px solid #333',
                 borderRadius: '8px',
-                boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
+                boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+                maxWidth: '100%',
+                maxHeight: '90vh',
+                overflow: 'hidden'
             }}></div>
-            <div style={{
-                marginTop: '20px',
-                textAlign: 'center',
-                maxWidth: '600px'
-            }}>
-                <h3>Controls:</h3>
-                <p>🏃‍♂️ Move: Arrow Keys or A/D</p>
-                <p>🦘 Jump: Up Arrow, W, or Spacebar</p>
-                <p>🎯 Goal: Reach the golden platform!</p>
-            </div>
         </div>
     );
 }
