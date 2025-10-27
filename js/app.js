@@ -4,8 +4,11 @@ function createCanvasGame() {
     
     // Calculate responsive canvas size
     function calculateCanvasSize() {
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const gamepadHeight = isMobile ? 160 : 0; // Reserve more space for gamepad on mobile
+        
         const maxWidth = Math.min(800, window.innerWidth - 40); // 20px padding on each side
-        const maxHeight = Math.min(600, window.innerHeight - 200); // Leave space for controls and UI
+        const maxHeight = Math.min(600, window.innerHeight - 150 - gamepadHeight); // Leave space for controls and UI
         
         // Maintain aspect ratio (4:3)
         const aspectRatio = 4 / 3;
@@ -115,7 +118,7 @@ function createCanvasGame() {
         }
         
         // Apply gravity
-        p.vy += 0.5 * game.scaleY;
+        p.vy += 0.5;
         
         // Update position
         p.x += p.vx;
@@ -129,24 +132,38 @@ function createCanvasGame() {
                 p.y < platform.y + platform.height &&
                 p.y + p.height > platform.y) {
                 
-                // Landing on top
-                if (p.vy > 0 && p.y < platform.y) {
-                    p.y = platform.y - p.height;
+                // Simple and reliable collision detection
+                const playerBottom = p.y + p.height;
+                const playerTop = p.y;
+                const playerLeft = p.x;
+                const playerRight = p.x + p.width;
+                
+                const platformTop = platform.y;
+                const platformBottom = platform.y + platform.height;
+                const platformLeft = platform.x;
+                const platformRight = platform.x + platform.width;
+                
+                // Vertical collisions (prioritize these)
+                if (p.vy > 0 && playerBottom > platformTop && playerTop < platformTop) {
+                    // Landing on top
+                    p.y = platformTop - p.height;
                     p.vy = 0;
                     p.onGround = true;
-                }
-                // Hitting from below
-                else if (p.vy < 0 && p.y > platform.y) {
-                    p.y = platform.y + platform.height;
+                } else if (p.vy < 0 && playerTop < platformBottom && playerBottom > platformBottom) {
+                    // Hitting from below
+                    p.y = platformBottom;
                     p.vy = 0;
-                }
-                // Hitting from sides
-                else if (p.vx > 0) {
-                    p.x = platform.x - p.width;
-                    p.vx = 0;
-                } else if (p.vx < 0) {
-                    p.x = platform.x + platform.width;
-                    p.vx = 0;
+                } else {
+                    // Horizontal collisions
+                    if (p.vx > 0 && playerRight > platformLeft && playerLeft < platformLeft) {
+                        // Moving right, hit left side of platform
+                        p.x = platformLeft - p.width;
+                        p.vx = 0;
+                    } else if (p.vx < 0 && playerLeft < platformRight && playerRight > platformRight) {
+                        // Moving left, hit right side of platform
+                        p.x = platformRight;
+                        p.vx = 0;
+                    }
                 }
             }
         }
@@ -298,17 +315,19 @@ function createGame() {
             let keys = {};
             
             class Player {
-                constructor(x, y) {
+                constructor(x, y, scaleX, scaleY) {
                     this.x = x;
                     this.y = y;
                     this.vx = 0;
                     this.vy = 0;
-                    this.width = 20;
-                    this.height = 40;
-                    this.speed = 5;
-                    this.jumpPower = 12;
+                    this.width = 20 * scaleX;
+                    this.height = 40 * scaleY;
+                    this.speed = 5 * scaleX;
+                    this.jumpPower = 12 * scaleY;
                     this.onGround = false;
                     this.facing = 1;
+                    this.scaleX = scaleX;
+                    this.scaleY = scaleY;
                 }
                 
                 update() {
@@ -331,8 +350,8 @@ function createGame() {
                         this.onGround = false;
                     }
                     
-                    // Use scaled gravity
-                    this.vy += 0.5 * (window.p5ScaleY || 1);
+                    // Apply gravity
+                    this.vy += 0.5;
                     this.x += this.vx;
                     this.y += this.vy;
                     
@@ -343,10 +362,38 @@ function createGame() {
                             this.y < platform.y + platform.height &&
                             this.y + this.height > platform.y) {
                             
-                            if (this.vy > 0 && this.y < platform.y) {
-                                this.y = platform.y - this.height;
+                            // Simple and reliable collision detection
+                            const playerBottom = this.y + this.height;
+                            const playerTop = this.y;
+                            const playerLeft = this.x;
+                            const playerRight = this.x + this.width;
+                            
+                            const platformTop = platform.y;
+                            const platformBottom = platform.y + platform.height;
+                            const platformLeft = platform.x;
+                            const platformRight = platform.x + platform.width;
+                            
+                            // Vertical collisions (prioritize these)
+                            if (this.vy > 0 && playerBottom > platformTop && playerTop < platformTop) {
+                                // Landing on top
+                                this.y = platformTop - this.height;
                                 this.vy = 0;
                                 this.onGround = true;
+                            } else if (this.vy < 0 && playerTop < platformBottom && playerBottom > platformBottom) {
+                                // Hitting from below
+                                this.y = platformBottom;
+                                this.vy = 0;
+                            } else {
+                                // Horizontal collisions
+                                if (this.vx > 0 && playerRight > platformLeft && playerLeft < platformLeft) {
+                                    // Moving right, hit left side of platform
+                                    this.x = platformLeft - this.width;
+                                    this.vx = 0;
+                                } else if (this.vx < 0 && playerLeft < platformRight && playerRight > platformRight) {
+                                    // Moving left, hit right side of platform
+                                    this.x = platformRight;
+                                    this.vx = 0;
+                                }
                             }
                         }
                     }
@@ -354,7 +401,7 @@ function createGame() {
                     if (this.x < 0) this.x = 0;
                     if (this.x > p.width - this.width) this.x = p.width - this.width;
                     if (this.y > p.height) {
-                        // Use scaled respawn position
+                        // Respawn at original position
                         this.x = 50 * (window.p5ScaleX || 1);
                         this.y = 100 * (window.p5ScaleY || 1);
                         this.vx = 0;
@@ -368,35 +415,35 @@ function createGame() {
                     p.scale(this.facing, 1);
                     
                     p.stroke(0);
-                    p.strokeWeight(3);
+                    p.strokeWeight(3 * this.scaleX);
                     
                     p.fill(255, 220, 177);
-                    p.circle(0, 10, 16);
+                    p.circle(0, 10 * this.scaleY, 16 * this.scaleX);
                     
-                    p.line(0, 18, 0, 30);
+                    p.line(0, 18 * this.scaleY, 0, 30 * this.scaleY);
                     
                     let armSwing = p.sin(p.frameCount * 0.3) * 0.3;
                     if (p.abs(this.vx) > 0.1) {
-                        p.line(0, 22, -8 + armSwing * 8, 28);
-                        p.line(0, 22, 8 - armSwing * 8, 28);
+                        p.line(0, 22 * this.scaleY, (-8 + armSwing * 8) * this.scaleX, 28 * this.scaleY);
+                        p.line(0, 22 * this.scaleY, (8 - armSwing * 8) * this.scaleX, 28 * this.scaleY);
                     } else {
-                        p.line(0, 22, -6, 28);
-                        p.line(0, 22, 6, 28);
+                        p.line(0, 22 * this.scaleY, -6 * this.scaleX, 28 * this.scaleY);
+                        p.line(0, 22 * this.scaleY, 6 * this.scaleX, 28 * this.scaleY);
                     }
                     
                     let legSwing = p.sin(p.frameCount * 0.4) * 0.4;
                     if (p.abs(this.vx) > 0.1 && this.onGround) {
-                        p.line(0, 30, -6 + legSwing * 6, 40);
-                        p.line(0, 30, 6 - legSwing * 6, 40);
+                        p.line(0, 30 * this.scaleY, (-6 + legSwing * 6) * this.scaleX, 40 * this.scaleY);
+                        p.line(0, 30 * this.scaleY, (6 - legSwing * 6) * this.scaleX, 40 * this.scaleY);
                     } else {
-                        p.line(0, 30, -4, 40);
-                        p.line(0, 30, 4, 40);
+                        p.line(0, 30 * this.scaleY, -4 * this.scaleX, 40 * this.scaleY);
+                        p.line(0, 30 * this.scaleY, 4 * this.scaleX, 40 * this.scaleY);
                     }
                     
                     p.fill(0);
                     p.noStroke();
-                    p.circle(-3, 8, 2);
-                    p.circle(3, 8, 2);
+                    p.circle(-3 * this.scaleX, 8 * this.scaleY, 2 * this.scaleX);
+                    p.circle(3 * this.scaleX, 8 * this.scaleY, 2 * this.scaleX);
                     
                     p.pop();
                 }
@@ -421,8 +468,11 @@ function createGame() {
             
             p.setup = () => {
                 // Calculate responsive canvas size
+                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                const gamepadHeight = isMobile ? 160 : 0; // Reserve more space for gamepad on mobile
+                
                 const maxWidth = Math.min(800, window.innerWidth - 40);
-                const maxHeight = Math.min(600, window.innerHeight - 200);
+                const maxHeight = Math.min(600, window.innerHeight - 150 - gamepadHeight);
                 
                 const aspectRatio = 4 / 3;
                 let canvasWidth = maxWidth;
@@ -439,11 +489,7 @@ function createGame() {
                 const scaleX = canvasWidth / 800;
                 const scaleY = canvasHeight / 600;
                 
-                player = new Player(50 * scaleX, 100 * scaleY);
-                player.width = 20 * scaleX;
-                player.height = 40 * scaleY;
-                player.speed = 5 * scaleX;
-                player.jumpPower = 12 * scaleY;
+                player = new Player(50 * scaleX, 100 * scaleY, scaleX, scaleY);
                 
                 platforms = [
                     new Platform(0, p.height - 20 * scaleY, p.width, 20 * scaleY, [139, 69, 19]),
@@ -511,10 +557,10 @@ class VirtualGamepad {
         this.container = document.createElement('div');
         this.container.style.cssText = `
             position: fixed;
-            bottom: 20px;
+            bottom: 10px;
             left: 0;
             right: 0;
-            height: 120px;
+            height: 130px;
             z-index: 1000;
             display: flex;
             justify-content: space-between;
@@ -700,15 +746,17 @@ function App() {
         };
     }, []);
 
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
     return (
         <div style={{ 
             display: 'flex', 
             flexDirection: 'column',
-            justifyContent: 'center', 
+            justifyContent: isMobile ? 'flex-start' : 'center', 
             alignItems: 'center', 
             minHeight: '100vh',
             fontFamily: 'Arial, sans-serif',
-            padding: '10px',
+            padding: isMobile ? '10px 10px 160px 10px' : '10px', // Extra bottom padding on mobile for gamepad
             boxSizing: 'border-box'
         }}>
             <div id="game-container" style={{
@@ -716,8 +764,9 @@ function App() {
                 borderRadius: '8px',
                 boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
                 maxWidth: '100%',
-                maxHeight: '90vh',
-                overflow: 'hidden'
+                maxHeight: isMobile ? 'calc(100vh - 200px)' : '90vh', // Account for gamepad space on mobile
+                overflow: 'hidden',
+                marginTop: isMobile ? '20px' : '0'
             }}></div>
         </div>
     );
