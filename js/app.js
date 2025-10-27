@@ -248,7 +248,9 @@ function createCanvasGame() {
             speed: 5 * scaleX,
             jumpPower: 12 * scaleY,
             onGround: false,
-            facing: 1
+            facing: 1,
+            jumpsRemaining: 2, // Allow double jump
+            lastJumpKey: false // Track if jump key was pressed last frame
         },
         platforms: [],
         keys: {},
@@ -278,6 +280,8 @@ function createCanvasGame() {
         game.player.y = level.spawn.y * scaleY;
         game.player.vx = 0;
         game.player.vy = 0;
+        game.player.jumpsRemaining = 2; // Reset double jump
+        game.player.lastJumpKey = false;
         game.levelComplete = false;
         game.showLevelComplete = false;
     }
@@ -364,6 +368,14 @@ function createCanvasGame() {
             p.onGround = false;
         }
         
+        // Double jump logic - check for new jump key press while in air
+        const jumpKeyPressed = allKeys['ArrowUp'] || allKeys['w'] || allKeys['W'] || allKeys['KeyW'] || allKeys[' '];
+        if (jumpKeyPressed && !p.lastJumpKey && !p.onGround && p.jumpsRemaining > 0) {
+            p.vy = -p.jumpPower * 0.85; // Slightly weaker second jump
+            p.jumpsRemaining--;
+        }
+        p.lastJumpKey = jumpKeyPressed;
+        
         // Apply gravity
         p.vy += 0.5;
         
@@ -394,6 +406,7 @@ function createCanvasGame() {
                         p.y = platformTop - p.height;
                         p.vy = 0;
                         p.onGround = true;
+                        p.jumpsRemaining = 2; // Reset double jump when landing
                         
                         // Check if it's the goal platform (yellow)
                         if (platform.color === '#FFD700' && !game.levelComplete) {
@@ -429,6 +442,8 @@ function createCanvasGame() {
             p.y = level.spawn.y * game.scaleY;
             p.vx = 0;
             p.vy = 0;
+            p.jumpsRemaining = 2; // Reset double jump on respawn
+            p.lastJumpKey = false;
         }
     }
     
@@ -642,6 +657,8 @@ function createGame() {
                 player.y = level.spawn.y * scaleY;
                 player.vx = 0;
                 player.vy = 0;
+                player.jumpsRemaining = 2; // Reset double jump
+                player.lastJumpKey = false;
                 levelComplete = false;
                 showLevelComplete = false;
             }
@@ -660,6 +677,8 @@ function createGame() {
                     this.facing = 1;
                     this.scaleX = scaleX;
                     this.scaleY = scaleY;
+                    this.jumpsRemaining = 2; // Allow double jump
+                    this.lastJumpKey = false; // Track if jump key was pressed last frame
                 }
                 
                 update() {
@@ -681,6 +700,14 @@ function createGame() {
                         this.vy = -this.jumpPower;
                         this.onGround = false;
                     }
+                    
+                    // Double jump logic - check for new jump key press while in air
+                    const jumpKeyPressed = allKeys['ArrowUp'] || allKeys['w'] || allKeys['W'] || allKeys[' '];
+                    if (jumpKeyPressed && !this.lastJumpKey && !this.onGround && this.jumpsRemaining > 0) {
+                        this.vy = -this.jumpPower * 0.85; // Slightly weaker second jump
+                        this.jumpsRemaining--;
+                    }
+                    this.lastJumpKey = jumpKeyPressed;
                     
                     // Apply gravity
                     this.vy += 0.5;
@@ -711,6 +738,7 @@ function createGame() {
                                 this.y = platformTop - this.height;
                                 this.vy = 0;
                                 this.onGround = true;
+                                this.jumpsRemaining = 2; // Reset double jump when landing
                                 
                                 // Check if it's the goal platform (yellow)
                                 if (platform.color[0] === 255 && platform.color[1] === 215 && platform.color[2] === 0 && !levelComplete) {
@@ -747,6 +775,8 @@ function createGame() {
                         this.y = level.spawn.y * scaleY;
                         this.vx = 0;
                         this.vy = 0;
+                        this.jumpsRemaining = 2; // Reset double jump on respawn
+                        this.lastJumpKey = false;
                     }
                 }
                 
