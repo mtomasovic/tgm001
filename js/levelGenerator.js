@@ -6,6 +6,11 @@ let lastUsedPatterns = [];
 
 // Random Level Generator
 function generateLevel(levelNumber) {
+    // Reset pattern tracking for Level 1 to ensure variety on page refresh
+    if (levelNumber === 1) {
+        lastUsedPatterns = [];
+    }
+    
     let attempts = 0;
     const maxAttempts = 10;
     
@@ -76,7 +81,8 @@ function generateLevelAttempt(levelNumber) {
     const minPlatformSize = Math.max(95 - levelNumber * 4, 35); // Minimum platform size (95-35)
     
     // NEW: Add randomization seed and variation factors for each level
-    const levelSeed = levelNumber * 13.37 + Math.random() * 1000;
+    // Using timestamp + random for true randomness on each generation
+    const levelSeed = levelNumber * 13.37 + Math.random() * 1000 + Date.now() % 10000;
     const shuffleFactor = 0.3 + Math.random() * 0.7; // 0.3-1.0 ensures minimum variation
     const hybridChance = Math.min(0.2 + levelNumber * 0.05, 0.5); // Start at 20%, increase to 50%
     const transformType = Math.floor(Math.random() * 4); // Different transformation per level
@@ -84,10 +90,11 @@ function generateLevelAttempt(levelNumber) {
     const platforms = [];
     const spawn = {x: 50, y: 500};
     
-    // Randomize starting platform position and size
-    const startPlatformWidth = 80 + Math.random() * 60;
-    const startPlatformX = Math.random() < 0.3 ? Math.random() * 50 : 0;
-    platforms.push({x: startPlatformX, y: 580, width: startPlatformWidth, height: 20, color: '#8B4513'});
+    // Randomize starting platform position and size - MORE VARIATION
+    const startPlatformWidth = 70 + Math.random() * 80; // 70-150 instead of 80-140
+    const startPlatformX = Math.random() * 60; // 0-60 instead of sometimes 0-50
+    const startPlatformY = 570 + Math.random() * 20; // 570-590 for variety
+    platforms.push({x: startPlatformX, y: startPlatformY, width: startPlatformWidth, height: 20, color: '#8B4513'});
     
     // Choose a random level pattern with weighted probabilities
     // Avoid repeating the last pattern to ensure visible variety
@@ -144,9 +151,11 @@ function generateLevelAttempt(levelNumber) {
         }
     }
     
-    // Vary starting position more dramatically
-    let currentX = 100 + Math.random() * 80; // 100-180 instead of fixed 140
-    let currentY = 500 + Math.random() * 80; // 500-580 varied start height
+    // Vary starting position more dramatically - MUCH MORE VARIATION
+    const startXVariation = 50 + Math.random() * 100; // 50-150 instead of 100-180
+    const startYVariation = Math.random() * 100; // 0-100 instead of 0-80
+    let currentX = 100 + startXVariation;
+    let currentY = 480 + startYVariation; // 480-580 varied start height (more range)
     const maxPlatforms = 5 + Math.floor(levelNumber / 1.5); // More platforms per level
     const platformsPerPattern = secondaryPattern ? Math.floor(maxPlatforms / 2) : maxPlatforms;
     
@@ -293,9 +302,17 @@ function generateLevelAttempt(levelNumber) {
         }
     }
     
-    // Goal platform - MORE DRAMATIC HEIGHT DIFFERENCES
-    const goalHeight = Math.max(80, 400 - levelNumber * 12); // Much higher, faster (400 down to 80)
-    const goalX = selectedPattern === 'valley' ? 400 + Math.random() * 200 : 650 + Math.random() * 100;
+    // Goal platform - MORE DRAMATIC HEIGHT AND POSITION DIFFERENCES
+    // Add significant random variation to goal position for each level generation
+    const baseGoalHeight = Math.max(80, 400 - levelNumber * 12);
+    const goalHeightVariation = Math.random() * 120 - 60; // ±60 pixels variation
+    const goalHeight = Math.max(80, Math.min(500, baseGoalHeight + goalHeightVariation));
+    
+    // Much more varied goal X position
+    const baseGoalX = selectedPattern === 'valley' ? 400 + Math.random() * 200 : 600 + Math.random() * 150;
+    const goalXVariation = Math.random() * 100 - 50; // ±50 pixels variation
+    const goalX = Math.max(550, Math.min(750, baseGoalX + goalXVariation));
+    
     const goal = {x: goalX, y: goalHeight};
     
     platforms.push({
@@ -306,8 +323,8 @@ function generateLevelAttempt(levelNumber) {
         color: '#FFD700'
     });
     
-    // Log level generation info for debugging
-    console.log(`Level ${levelNumber}: Pattern=${selectedPattern}${secondaryPattern ? '+' + secondaryPattern : ''}, Transform=${transformType}, Shuffle=${shuffleFactor.toFixed(2)}, Platforms=${platforms.length}`);
+    // Log level generation info for debugging - ENHANCED LOGGING
+    console.log(`Level ${levelNumber}: Pattern=${selectedPattern}${secondaryPattern ? '+' + secondaryPattern : ''}, Transform=${transformType}, Shuffle=${shuffleFactor.toFixed(2)}, Platforms=${platforms.length}, GoalPos=(${Math.round(goal.x)},${Math.round(goal.y)}), StartX=${Math.round(currentX)}`);
     
     return {
         platforms: platforms,
