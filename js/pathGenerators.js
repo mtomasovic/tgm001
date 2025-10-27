@@ -2,19 +2,47 @@
 // This file contains all the different path generation algorithms
 
 // Linear ascending path
-function generateLinearPath(platforms, startX, startY, maxPlatforms, levelNumber, baseGap, minPlatformSize, platformSizeVariation, deathTrapChance) {
+function generateLinearPath(config) {
+    const {platforms, currentX: startX, currentY: startY, maxPlatforms, levelNumber, 
+           baseGap, minPlatformSize, platformSizeVariation, deathTrapChance, 
+           shuffleFactor = 0.5, transformType = 0} = config;
+    
     let currentX = startX;
     let currentY = startY;
     
+    // NEW: Add sub-pattern variation
+    const subPattern = Math.floor(Math.random() * 3);
+    const stepVariation = Math.random(); // 0-1 for step size variation
+    
     for (let i = 0; i < maxPlatforms && currentX < 600; i++) {
-        const gap = Math.max(40, baseGap + Math.random() * 30 - 15);
+        // More gap variation based on shuffle factor
+        const gapVariation = shuffleFactor * 60; // 0-60 extra variation
+        const gap = Math.max(40, baseGap + (Math.random() - 0.5) * gapVariation);
         currentX += gap;
         
-        // Gradual ascent
-        currentY -= 30 + Math.random() * 40;
-        currentY = Math.max(150, currentY);
+        // Different climbing patterns based on sub-pattern
+        let heightDrop;
+        switch (subPattern) {
+            case 0: // Steady climb
+                heightDrop = 40 + Math.random() * 40 + (levelNumber * 5);
+                break;
+            case 1: // Accelerating climb (gets steeper)
+                heightDrop = 30 + (i * 10) + Math.random() * 30 + (levelNumber * 4);
+                break;
+            case 2: // Variable climb (big steps and small steps)
+                heightDrop = (i % 2 === 0 ? 60 : 25) + Math.random() * 35 + (levelNumber * 5);
+                break;
+        }
         
-        const platformWidth = minPlatformSize + Math.random() * platformSizeVariation;
+        // Apply step variation
+        heightDrop *= (0.7 + stepVariation * 0.6); // 70%-130% of calculated height
+        
+        currentY -= heightDrop;
+        currentY = Math.max(100, currentY);
+        
+        // Platform width variation increases with shuffle factor
+        const widthVar = platformSizeVariation * (0.5 + shuffleFactor * 0.5);
+        const platformWidth = minPlatformSize + Math.random() * widthVar;
         
         platforms.push({
             x: currentX,
@@ -24,12 +52,26 @@ function generateLinearPath(platforms, startX, startY, maxPlatforms, levelNumber
             color: '#009600'
         });
         
-        // Add death traps occasionally
+        // Add death traps with varied placement
         if (levelNumber > 1 && Math.random() < deathTrapChance * 0.4) {
+            const trapPlacement = Math.random();
+            let trapX, trapY;
+            
+            if (trapPlacement < 0.4) { // After platform
+                trapX = currentX + platformWidth + 10;
+                trapY = currentY + 25;
+            } else if (trapPlacement < 0.7) { // On platform
+                trapX = currentX + platformWidth * 0.3;
+                trapY = currentY + 25;
+            } else { // Before platform
+                trapX = currentX - 25;
+                trapY = currentY + 25;
+            }
+            
             platforms.push({
-                x: currentX + platformWidth + 10,
-                y: currentY + 25,
-                width: 20,
+                x: trapX,
+                y: trapY,
+                width: 15 + Math.random() * 10,
                 height: 20,
                 color: '#FF0000'
             });
@@ -38,22 +80,35 @@ function generateLinearPath(platforms, startX, startY, maxPlatforms, levelNumber
 }
 
 // Zigzag up and down path
-function generateZigzagPath(platforms, startX, startY, maxPlatforms, levelNumber, baseGap, minPlatformSize, platformSizeVariation, deathTrapChance) {
+function generateZigzagPath(config) {
+    const {platforms, currentX: startX, currentY: startY, maxPlatforms, levelNumber, 
+           baseGap, minPlatformSize, platformSizeVariation, deathTrapChance, 
+           shuffleFactor = 0.5, transformType = 0} = config;
+    
     let currentX = startX;
     let currentY = startY;
-    let goingUp = true;
+    let goingUp = Math.random() < 0.5; // Randomize starting direction
+    
+    // NEW: Vary zigzag amplitude and frequency
+    const amplitude = 50 + shuffleFactor * 40; // 50-90
+    const frequency = Math.random() < 0.5 ? 2 : 3; // Switches every 2 or 3 platforms
     
     for (let i = 0; i < maxPlatforms && currentX < 600; i++) {
-        const gap = Math.max(50, baseGap + Math.random() * 20 - 10);
+        const gap = Math.max(50, baseGap + (Math.random() - 0.5) * 30);
         currentX += gap;
         
-        // Zigzag pattern
+        // Switch direction based on frequency
+        if (i > 0 && i % frequency === 0) {
+            goingUp = !goingUp;
+        }
+        
+        // Zigzag pattern with varied amplitude
         if (goingUp) {
-            currentY -= 60 + Math.random() * 40;
-            if (currentY < 200) goingUp = false;
+            currentY -= amplitude + Math.random() * 40;
+            if (currentY < 150) goingUp = false;
         } else {
-            currentY += 40 + Math.random() * 30;
-            if (currentY > 500) goingUp = true;
+            currentY += (amplitude * 0.7) + Math.random() * 30;
+            if (currentY > 520) goingUp = true;
         }
         currentY = Math.max(150, Math.min(550, currentY));
         
@@ -67,12 +122,13 @@ function generateZigzagPath(platforms, startX, startY, maxPlatforms, levelNumber
             color: '#009600'
         });
         
-        // More death traps in zigzag for difficulty
+        // More varied death trap placement in zigzag
         if (levelNumber > 2 && Math.random() < deathTrapChance * 0.6) {
+            const placement = Math.random();
             platforms.push({
-                x: currentX - 15,
+                x: placement < 0.5 ? currentX - 15 : currentX + platformWidth - 10,
                 y: currentY + 25,
-                width: 15,
+                width: 12 + Math.random() * 8,
                 height: 20,
                 color: '#FF0000'
             });
@@ -81,17 +137,37 @@ function generateZigzagPath(platforms, startX, startY, maxPlatforms, levelNumber
 }
 
 // Vertical tower climbing
-function generateTowerPath(platforms, startX, startY, maxPlatforms, levelNumber, baseGap, minPlatformSize, platformSizeVariation, deathTrapChance) {
+function generateTowerPath(config) {
+    const {platforms, currentX: startX, currentY: startY, maxPlatforms, levelNumber, 
+           baseGap, minPlatformSize, platformSizeVariation, deathTrapChance, 
+           shuffleFactor = 0.5, transformType = 0} = config;
+    
     let currentX = startX;
     let currentY = startY;
     
-    // Create a tower structure
+    // NEW: Vary tower structure - straight up, leaning, or spiraling
+    const towerStyle = Math.floor(Math.random() * 3);
+    const lean = (Math.random() - 0.5) * shuffleFactor * 40; // -20 to +20 lean per platform
+    
     for (let i = 0; i < maxPlatforms && currentX < 500; i++) {
-        const gap = Math.max(30, baseGap * 0.7 + Math.random() * 20 - 10);
-        currentX += gap;
+        const gap = Math.max(30, baseGap * 0.7 + (Math.random() - 0.5) * 30);
         
-        // Steep climb with some variation
-        currentY -= 80 + Math.random() * 30;
+        // Apply tower style
+        switch (towerStyle) {
+            case 0: // Straight tower
+                currentX += gap * 0.3;
+                break;
+            case 1: // Leaning tower
+                currentX += gap * 0.4 + lean;
+                break;
+            case 2: // Spiraling tower
+                currentX += gap * 0.5 + Math.sin(i * 0.8) * 30;
+                break;
+        }
+        
+        // Steep climb with variation
+        const climbHeight = 70 + Math.random() * 40 + (shuffleFactor * 20);
+        currentY -= climbHeight;
         currentY = Math.max(100, currentY);
         
         const platformWidth = Math.max(40, minPlatformSize * 0.8 + Math.random() * (platformSizeVariation * 0.6));
@@ -104,12 +180,14 @@ function generateTowerPath(platforms, startX, startY, maxPlatforms, levelNumber,
             color: '#009600'
         });
         
-        // Add stepping stones for tower climbing
-        if (i > 0 && Math.random() < 0.5) {
+        // Add stepping stones with varied placement
+        if (i > 0 && Math.random() < 0.4 + shuffleFactor * 0.3) {
+            const stepX = currentX + (Math.random() - 0.5) * 60;
+            const stepY = currentY + 35 + Math.random() * 15;
             platforms.push({
-                x: currentX - 40,
-                y: currentY + 40,
-                width: 30,
+                x: stepX,
+                y: stepY,
+                width: 25 + Math.random() * 15,
                 height: 20,
                 color: '#009600'
             });
@@ -129,22 +207,32 @@ function generateTowerPath(platforms, startX, startY, maxPlatforms, levelNumber,
 }
 
 // Valley and hill pattern
-function generateValleyPath(platforms, startX, startY, maxPlatforms, levelNumber, baseGap, minPlatformSize, platformSizeVariation, deathTrapChance) {
+function generateValleyPath(config) {
+    const {platforms, currentX: startX, currentY: startY, maxPlatforms, levelNumber, 
+           baseGap, minPlatformSize, platformSizeVariation, deathTrapChance, 
+           shuffleFactor = 0.5, transformType = 0} = config;
+    
     let currentX = startX;
     let currentY = startY;
     
+    // NEW: Randomize valley shape - shallow, deep, or asymmetric
+    const valleyDepth = 80 + shuffleFactor * 100; // 80-180
+    const valleyAsymmetry = (Math.random() - 0.5) * 0.3; // -0.15 to +0.15
+    
     for (let i = 0; i < maxPlatforms && currentX < 600; i++) {
-        const gap = Math.max(45, baseGap + Math.random() * 25 - 12);
+        const gap = Math.max(45, baseGap + (Math.random() - 0.5) * 35);
         currentX += gap;
         
-        // Create valley shape (down then up)
-        const valleyProgress = i / maxPlatforms;
+        // Create valley shape with asymmetry
+        const valleyProgress = i / maxPlatforms + valleyAsymmetry;
         if (valleyProgress < 0.5) {
             // Going down into valley
-            currentY += 40 + Math.random() * 30;
+            const descentRate = 1 - Math.abs(valleyProgress - 0.25) * 2; // Peaks at 0.25
+            currentY += (30 + Math.random() * 30) * (1 + descentRate);
         } else {
-            // Coming up from valley
-            currentY -= 50 + Math.random() * 40;
+            // Coming up from valley  
+            const ascentRate = (valleyProgress - 0.5) * 2; // Increases after midpoint
+            currentY -= (40 + Math.random() * 40) * (1 + ascentRate * 0.5);
         }
         currentY = Math.max(150, Math.min(580, currentY));
         
@@ -158,12 +246,12 @@ function generateValleyPath(platforms, startX, startY, maxPlatforms, levelNumber
             color: '#009600'
         });
         
-        // More traps in the valley bottom
+        // More traps in the valley bottom with varied sizes
         if (levelNumber > 2 && valleyProgress > 0.3 && valleyProgress < 0.7 && Math.random() < deathTrapChance * 0.7) {
             platforms.push({
-                x: currentX + Math.random() * platformWidth,
+                x: currentX + Math.random() * platformWidth * 0.7,
                 y: currentY + 25,
-                width: 15,
+                width: 12 + Math.random() * 8,
                 height: 20,
                 color: '#FF0000'
             });
@@ -172,22 +260,36 @@ function generateValleyPath(platforms, startX, startY, maxPlatforms, levelNumber
 }
 
 // Scattered platform layout with better connectivity
-function generateScatteredPath(platforms, startX, startY, maxPlatforms, levelNumber, baseGap, minPlatformSize, platformSizeVariation, deathTrapChance) {
+function generateScatteredPath(config) {
+    const {platforms, currentX: startX, currentY: startY, maxPlatforms, levelNumber, 
+           baseGap, minPlatformSize, platformSizeVariation, deathTrapChance, 
+           shuffleFactor = 0.5, transformType = 0} = config;
+    
     const platformPositions = [];
     const clusters = Math.min(3, Math.floor(levelNumber / 3) + 1); // Create platform clusters
     
+    // NEW: Vary cluster distribution
+    const clusterSpread = 100 + shuffleFactor * 150; // 100-250
+    const clusterPattern = Math.floor(Math.random() * 2); // Horizontal or vertical emphasis
+    
     // Generate clustered positions for better flow
     for (let cluster = 0; cluster < clusters; cluster++) {
-        const clusterCenterX = 200 + (cluster / (clusters - 1)) * 350;
+        const clusterCenterX = 200 + (cluster / Math.max(1, clusters - 1)) * 350;
         const clusterCenterY = 250 + Math.random() * 200;
         const platformsPerCluster = Math.floor(maxPlatforms / clusters);
         
         for (let i = 0; i < platformsPerCluster; i++) {
             const angle = (i / platformsPerCluster) * Math.PI * 2;
-            const radius = 40 + Math.random() * 60;
+            const radius = 40 + Math.random() * clusterSpread * 0.5;
             
-            const x = clusterCenterX + Math.cos(angle) * radius + Math.random() * 40 - 20;
-            const y = clusterCenterY + Math.sin(angle) * radius + Math.random() * 40 - 20;
+            let x, y;
+            if (clusterPattern === 0) { // Horizontal spread
+                x = clusterCenterX + Math.cos(angle) * radius * 1.5 + Math.random() * 40 - 20;
+                y = clusterCenterY + Math.sin(angle) * radius * 0.7 + Math.random() * 40 - 20;
+            } else { // Vertical spread
+                x = clusterCenterX + Math.cos(angle) * radius * 0.7 + Math.random() * 40 - 20;
+                y = clusterCenterY + Math.sin(angle) * radius * 1.5 + Math.random() * 40 - 20;
+            }
             
             platformPositions.push({
                 x: Math.max(150, Math.min(650, x)),
@@ -223,14 +325,14 @@ function generateScatteredPath(platforms, startX, startY, maxPlatforms, levelNum
             const heightDiff = Math.abs(pos.y - prevPos.y);
             
             if (distance > 140 || heightDiff > 120) {
-                // Add intermediate platform
-                const midX = (pos.x + prevPos.x) / 2 + Math.random() * 30 - 15;
-                const midY = (pos.y + prevPos.y) / 2 + Math.random() * 30 - 15;
+                // Add intermediate platform with variation
+                const midX = (pos.x + prevPos.x) / 2 + (Math.random() - 0.5) * 40;
+                const midY = (pos.y + prevPos.y) / 2 + (Math.random() - 0.5) * 40;
                 
                 platforms.push({
                     x: midX,
                     y: midY,
-                    width: 50,
+                    width: 40 + Math.random() * 30,
                     height: 20,
                     color: '#009600'
                 });
@@ -266,25 +368,36 @@ function generateScatteredPath(platforms, startX, startY, maxPlatforms, levelNum
 }
 
 // Spiral ascending pattern
-function generateSpiralPath(platforms, startX, startY, maxPlatforms, levelNumber, baseGap, minPlatformSize, platformSizeVariation, deathTrapChance) {
+function generateSpiralPath(config) {
+    const {platforms, currentX: startX, currentY: startY, maxPlatforms, levelNumber, 
+           baseGap, minPlatformSize, platformSizeVariation, deathTrapChance, 
+           shuffleFactor = 0.5, transformType = 0} = config;
+    
     let currentX = startX;
     let currentY = startY;
-    let angle = 0;
-    const spiralRadius = 80 + levelNumber * 5;
-    const centerX = 350;
-    const centerY = 350;
+    let angle = Math.random() * Math.PI; // Random starting angle
+    
+    // NEW: Vary spiral characteristics
+    const spiralRadius = 70 + levelNumber * 5 + shuffleFactor * 40; // 70-150+
+    const spiralTightness = 10 + shuffleFactor * 15; // How much radius shrinks per step
+    const centerX = 320 + Math.random() * 80; // Randomize center
+    const centerY = 380 + Math.random() * 80;
+    const clockwise = Math.random() < 0.5 ? 1 : -1; // Random direction
     
     for (let i = 0; i < maxPlatforms && currentX < 600; i++) {
-        angle += Math.PI / 3 + Math.random() * Math.PI / 6; // 60-90 degrees per step
+        const angleStep = (Math.PI / 3 + Math.random() * Math.PI / 6) * clockwise; // 60-90 degrees
+        angle += angleStep;
         
-        currentX = centerX + Math.cos(angle) * (spiralRadius - i * 15);
-        currentY = centerY - Math.sin(angle) * (spiralRadius - i * 15) - i * 20; // Ascending spiral
+        const currentRadius = spiralRadius - i * spiralTightness;
+        currentX = centerX + Math.cos(angle) * currentRadius;
+        currentY = centerY - Math.sin(angle) * currentRadius - i * (15 + shuffleFactor * 10); // Ascending
         
         // Keep within bounds
         currentX = Math.max(150, Math.min(650, currentX));
         currentY = Math.max(150, Math.min(550, currentY));
         
-        const platformWidth = Math.max(40, minPlatformSize - i * 5); // Getting smaller as we go up
+        // Platform gets smaller as we spiral up
+        const platformWidth = Math.max(35, minPlatformSize - i * 5); 
         
         platforms.push({
             x: currentX,
@@ -294,12 +407,13 @@ function generateSpiralPath(platforms, startX, startY, maxPlatforms, levelNumber
             color: '#009600'
         });
         
-        // Strategic death traps
+        // Strategic death traps - more in outer spiral
         if (levelNumber > 3 && Math.random() < deathTrapChance * 0.4) {
+            const trapOffset = Math.random() < 0.5 ? platformWidth + 10 : -15;
             platforms.push({
-                x: currentX + platformWidth + 10,
+                x: currentX + trapOffset,
                 y: currentY + 25,
-                width: 15,
+                width: 12 + Math.random() * 8,
                 height: 20,
                 color: '#FF0000'
             });
@@ -308,14 +422,22 @@ function generateSpiralPath(platforms, startX, startY, maxPlatforms, levelNumber
 }
 
 // Branching path with multiple routes
-function generateBranchingPath(platforms, startX, startY, maxPlatforms, levelNumber, baseGap, minPlatformSize, platformSizeVariation, deathTrapChance) {
+function generateBranchingPath(config) {
+    const {platforms, currentX: startX, currentY: startY, maxPlatforms, levelNumber, 
+           baseGap, minPlatformSize, platformSizeVariation, deathTrapChance, 
+           shuffleFactor = 0.5, transformType = 0} = config;
+    
     let currentX = startX;
     let currentY = startY;
+    
+    // NEW: Vary branching structure
+    const branchCount = 2 + Math.floor(shuffleFactor * 2); // 2-3 branches
+    const branchingStyle = Math.floor(Math.random() * 2); // Early or late branching
     
     // Main path
     const mainPlatforms = Math.floor(maxPlatforms * 0.7);
     for (let i = 0; i < mainPlatforms && currentX < 500; i++) {
-        const gap = Math.max(50, baseGap + Math.random() * 25 - 12);
+        const gap = Math.max(50, baseGap + (Math.random() - 0.5) * 35);
         currentX += gap;
         currentY -= 40 + Math.random() * 30;
         currentY = Math.max(200, currentY);
@@ -330,9 +452,13 @@ function generateBranchingPath(platforms, startX, startY, maxPlatforms, levelNum
             color: '#009600'
         });
         
-        // Create branches at certain points
-        if (i === Math.floor(mainPlatforms / 3) || i === Math.floor(mainPlatforms * 2/3)) {
-            createBranch(platforms, currentX, currentY, levelNumber, minPlatformSize, deathTrapChance);
+        // Create branches at varied points
+        const branchPoints = branchingStyle === 0 ? 
+            [Math.floor(mainPlatforms / 4), Math.floor(mainPlatforms / 2)] : // Early branching
+            [Math.floor(mainPlatforms / 2), Math.floor(mainPlatforms * 3/4)]; // Late branching
+        
+        if (branchPoints.includes(i)) {
+            createBranch(platforms, currentX, currentY, levelNumber, minPlatformSize, deathTrapChance, shuffleFactor);
         }
         
         // Death traps on main path
@@ -349,20 +475,21 @@ function generateBranchingPath(platforms, startX, startY, maxPlatforms, levelNum
 }
 
 // Helper function for branching paths
-function createBranch(platforms, branchX, branchY, levelNumber, minPlatformSize, deathTrapChance) {
-    // Create upper and lower branches
+function createBranch(platforms, branchX, branchY, levelNumber, minPlatformSize, deathTrapChance, shuffleFactor = 0.5) {
+    // Create upper and lower branches with variation
     const directions = [1, -1]; // up and down
+    const branchLength = 2 + Math.floor(shuffleFactor); // 2-3 platforms per branch
     
     for (let dir of directions) {
-        let branchCurrentX = branchX + 30;
-        let branchCurrentY = branchY + dir * 60;
+        let branchCurrentX = branchX + 30 + Math.random() * 20;
+        let branchCurrentY = branchY + dir * (50 + shuffleFactor * 30);
         
-        for (let i = 0; i < 2 && branchCurrentX < 650; i++) {
-            branchCurrentX += 60 + Math.random() * 30;
-            branchCurrentY += dir * (20 + Math.random() * 20);
+        for (let i = 0; i < branchLength && branchCurrentX < 650; i++) {
+            branchCurrentX += 60 + Math.random() * 40;
+            branchCurrentY += dir * (20 + Math.random() * 25);
             branchCurrentY = Math.max(150, Math.min(550, branchCurrentY));
             
-            const platformWidth = Math.max(40, minPlatformSize * 0.8);
+            const platformWidth = Math.max(35, minPlatformSize * (0.7 + Math.random() * 0.2));
             
             platforms.push({
                 x: branchCurrentX,
@@ -387,19 +514,27 @@ function createBranch(platforms, branchX, branchY, levelNumber, minPlatformSize,
 }
 
 // Pyramid climbing pattern
-function generatePyramidPath(platforms, startX, startY, maxPlatforms, levelNumber, baseGap, minPlatformSize, platformSizeVariation, deathTrapChance) {
+function generatePyramidPath(config) {
+    const {platforms, currentX: startX, currentY: startY, maxPlatforms, levelNumber, 
+           baseGap, minPlatformSize, platformSizeVariation, deathTrapChance, 
+           shuffleFactor = 0.5, transformType = 0} = config;
+    
     let currentX = startX;
     let currentY = startY;
     let pyramidLevel = 0;
-    const pyramidWidth = 120;
     
-    for (let i = 0; i < maxPlatforms && currentX < 600; i++) {
-        // Create pyramid structure
+    // NEW: Vary pyramid characteristics
+    const pyramidWidth = 100 + shuffleFactor * 60; // 100-160
+    const pyramidStyle = Math.floor(Math.random() * 2); // Centered or offset
+    const maxLevels = 3 + Math.floor(shuffleFactor * 2); // 3-5 levels
+    
+    for (let i = 0; i < maxPlatforms && currentX < 600 && pyramidLevel < maxLevels; i++) {
+        // Create pyramid structure - fewer platforms as we go up
         const platformsInLevel = Math.max(1, 3 - pyramidLevel);
         
         for (let j = 0; j < platformsInLevel && currentX < 600; j++) {
             const gap = pyramidWidth / (platformsInLevel + 1);
-            currentX += gap;
+            currentX += gap + (Math.random() - 0.5) * 20; // Add jitter
             
             const platformWidth = Math.max(30, minPlatformSize - pyramidLevel * 10);
             
@@ -427,8 +562,14 @@ function generatePyramidPath(platforms, startX, startY, maxPlatforms, levelNumbe
         
         // Move up to next pyramid level
         pyramidLevel++;
-        currentY -= 70 + Math.random() * 30;
+        currentY -= 60 + Math.random() * 40;
         currentY = Math.max(150, currentY);
-        currentX = startX + pyramidLevel * 40; // Shift each level
+        
+        // Pyramid style affects horizontal offset
+        if (pyramidStyle === 0) {
+            currentX = startX + pyramidLevel * 40; // Centered offset
+        } else {
+            currentX = startX + pyramidLevel * (30 + Math.random() * 20); // Random offset
+        }
     }
 }

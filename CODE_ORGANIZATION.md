@@ -38,19 +38,26 @@ main.js
 ### `levelGenerator.js`
 - `generateLevel()` - Main level generation with retry logic
 - `isLevelCompletable()` - Pathfinding validation to ensure levels are winnable
-- `generateLevelAttempt()` - Creates a level attempt with selected pattern
+- `generateLevelAttempt()` - Creates a level attempt with selected pattern, hybrid mixing, and transformations
 - `generateFallbackLevel()` - Simple guaranteed completable level
+- `applyLevelTransformations()` - **NEW**: Applies random transformations (vertical shuffle, horizontal jitter, size variation, wave patterns) to create unique level variations
 
 ### `pathGenerators.js`
-- `generateLinearPath()` - Gradual ascending path
-- `generateZigzagPath()` - Up and down zigzag pattern
-- `generateTowerPath()` - Vertical tower climbing
-- `generateValleyPath()` - Valley and hill pattern
-- `generateScatteredPath()` - Clustered scattered platforms
-- `generateSpiralPath()` - Spiral ascending pattern
-- `generateBranchingPath()` - Multiple branching routes
-- `generatePyramidPath()` - Pyramid climbing pattern
-- `createBranch()` - Helper for branching paths
+**Updated to use config objects with enhanced randomness**:
+- `generateLinearPath(config)` - Gradual ascending path with 3 sub-patterns and varied climbing rates
+- `generateZigzagPath(config)` - Up and down zigzag with adjustable amplitude and frequency
+- `generateTowerPath(config)` - Vertical tower with straight, leaning, or spiraling styles
+- `generateValleyPath(config)` - Valley and hill with depth and asymmetry variations
+- `generateScatteredPath(config)` - Clustered scattered platforms with horizontal/vertical emphasis
+- `generateSpiralPath(config)` - Spiral ascending with random direction, center, and tightness
+- `generateBranchingPath(config)` - Multiple branching routes with early/late branching styles
+- `generatePyramidPath(config)` - Pyramid climbing with varied width and centering
+- `createBranch()` - Helper for branching paths with variable branch length
+
+**New config parameters**:
+- `shuffleFactor` (0-1): Controls deviation from base pattern
+- `transformType` (0-3): Determines post-generation transformation
+- All generators now support sub-pattern variations
 
 ### `alternativeRoutes.js`
 - `addMovingPlatforms()` - Adds moving platforms for advanced levels
@@ -101,11 +108,21 @@ The HTML file loads scripts in this order:
 
 1. **Modularity** - Each file has a single, clear responsibility
 2. **Maintainability** - Easy to find and modify specific features
-3. **Testability** - Individual modules can be tested independently
-4. **Readability** - Smaller files are easier to understand
-5. **Reusability** - Modules can be reused in other projects
-6. **Collaboration** - Multiple developers can work on different modules
-7. **Debugging** - Issues are easier to isolate and fix
+3. **Testability** - Individual modules can be tested in isolation
+4. **Scalability** - New patterns or features can be added without touching existing code
+5. **Readability** - Smaller files are easier to understand and navigate
+6. **Enhanced Randomness** - **NEW**: Hybrid pattern mixing, sub-pattern variations, and post-generation transformations ensure each level is unique while maintaining difficulty progression
+
+## Recent Enhancements
+
+### Level Variety & Randomness (Latest)
+- **Hybrid Pattern System**: Levels can now combine two different path patterns (e.g., zigzag + tower)
+- **Sub-Pattern Variations**: Each generator has 2-3 internal variations for the same pattern type
+- **Post-Generation Transformations**: 4 types of transformations (vertical shuffle, horizontal jitter, size variation, wave patterns) applied after generation
+- **Randomization Parameters**: `shuffleFactor` and `transformType` ensure levels look different each time
+- **Enhanced Details**: Varied gap sizes, platform widths, trap placements, and more
+
+See `LEVEL_VARIETY_ENHANCEMENTS.md` for complete details on randomness improvements.
 
 ## Future Improvements
 

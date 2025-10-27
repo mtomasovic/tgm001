@@ -1,6 +1,9 @@
 // Level Generation System
 // This file contains all the procedural level generation logic
 
+// Track last used patterns to ensure variety
+let lastUsedPatterns = [];
+
 // Random Level Generator
 function generateLevel(levelNumber) {
     let attempts = 0;
@@ -65,20 +68,29 @@ function isLevelCompletable(level) {
 }
 
 function generateLevelAttempt(levelNumber) {
-    // Base difficulty parameters that increase with level
-    const baseGap = 70 + Math.min(levelNumber * 8, 100); // Reduced max gap for better connectivity
-    const maxPlatformHeight = 120 + Math.min(levelNumber * 20, 450); // How high platforms can be (120-570)
-    const deathTrapChance = Math.min(levelNumber * 0.06, 0.35); // Reduced death trap chance for validation
-    const platformSizeVariation = Math.max(70 - levelNumber * 2, 30); // Platform size gets smaller (70-30)
-    const minPlatformSize = Math.max(90 - levelNumber * 3, 40); // Minimum platform size (90-40)
+    // Base difficulty parameters that increase with level - MORE AGGRESSIVE SCALING
+    const baseGap = 60 + Math.min(levelNumber * 12, 140); // Wider gaps faster (60-200)
+    const maxPlatformHeight = 150 + Math.min(levelNumber * 30, 450); // Higher platforms faster (150-600)
+    const deathTrapChance = Math.min(levelNumber * 0.08, 0.4); // More death traps
+    const platformSizeVariation = Math.max(80 - levelNumber * 3, 25); // Platform size gets smaller (80-25)
+    const minPlatformSize = Math.max(95 - levelNumber * 4, 35); // Minimum platform size (95-35)
+    
+    // NEW: Add randomization seed and variation factors for each level
+    const levelSeed = levelNumber * 13.37 + Math.random() * 1000;
+    const shuffleFactor = 0.3 + Math.random() * 0.7; // 0.3-1.0 ensures minimum variation
+    const hybridChance = Math.min(0.2 + levelNumber * 0.05, 0.5); // Start at 20%, increase to 50%
+    const transformType = Math.floor(Math.random() * 4); // Different transformation per level
     
     const platforms = [];
     const spawn = {x: 50, y: 500};
     
-    // Always start with ground platform
-    platforms.push({x: 0, y: 580, width: 120, height: 20, color: '#8B4513'});
+    // Randomize starting platform position and size
+    const startPlatformWidth = 80 + Math.random() * 60;
+    const startPlatformX = Math.random() < 0.3 ? Math.random() * 50 : 0;
+    platforms.push({x: startPlatformX, y: 580, width: startPlatformWidth, height: 20, color: '#8B4513'});
     
     // Choose a random level pattern with weighted probabilities
+    // Avoid repeating the last pattern to ensure visible variety
     const patterns = [
         {name: 'linear', weight: 1},
         {name: 'zigzag', weight: 1.5},
@@ -90,11 +102,18 @@ function generateLevelAttempt(levelNumber) {
         {name: 'pyramid', weight: 1}
     ];
     
-    const totalWeight = patterns.reduce((sum, p) => sum + p.weight, 0);
+    // Filter out recently used patterns for more variety
+    let availablePatterns = patterns;
+    if (lastUsedPatterns.length > 0) {
+        const lastPattern = lastUsedPatterns[lastUsedPatterns.length - 1];
+        availablePatterns = patterns.filter(p => p.name !== lastPattern);
+    }
+    
+    const totalWeight = availablePatterns.reduce((sum, p) => sum + p.weight, 0);
     let random = Math.random() * totalWeight;
     let selectedPattern = 'linear';
     
-    for (let pattern of patterns) {
+    for (let pattern of availablePatterns) {
         random -= pattern.weight;
         if (random <= 0) {
             selectedPattern = pattern.name;
@@ -102,36 +121,133 @@ function generateLevelAttempt(levelNumber) {
         }
     }
     
-    let currentX = 140;
-    let currentY = 550;
-    const maxPlatforms = 6 + Math.floor(levelNumber / 2);
+    // Track this pattern
+    lastUsedPatterns.push(selectedPattern);
+    if (lastUsedPatterns.length > 3) {
+        lastUsedPatterns.shift(); // Keep only last 3 patterns
+    }
+    
+    // NEW: Maybe select a second pattern to hybrid mix
+    let secondaryPattern = null;
+    // Start hybrid mixing from level 2 instead of level 4
+    if (levelNumber > 1 && Math.random() < hybridChance) {
+        let secondRandom = Math.random() * totalWeight;
+        let attempts = 0;
+        for (let pattern of patterns) {
+            if (pattern.name !== selectedPattern) {
+                secondRandom -= pattern.weight;
+                if (secondRandom <= 0 || attempts++ > 5) {
+                    secondaryPattern = pattern.name;
+                    break;
+                }
+            }
+        }
+    }
+    
+    // Vary starting position more dramatically
+    let currentX = 100 + Math.random() * 80; // 100-180 instead of fixed 140
+    let currentY = 500 + Math.random() * 80; // 500-580 varied start height
+    const maxPlatforms = 5 + Math.floor(levelNumber / 1.5); // More platforms per level
+    const platformsPerPattern = secondaryPattern ? Math.floor(maxPlatforms / 2) : maxPlatforms;
+    
+    // Generate primary pattern
+    const patternConfig = {
+        platforms,
+        currentX,
+        currentY,
+        maxPlatforms: platformsPerPattern,
+        levelNumber,
+        baseGap,
+        minPlatformSize,
+        platformSizeVariation,
+        deathTrapChance,
+        shuffleFactor, // NEW: pass shuffle factor
+        transformType  // NEW: pass transform type
+    };
     
     switch (selectedPattern) {
         case 'linear':
-            generateLinearPath(platforms, currentX, currentY, maxPlatforms, levelNumber, baseGap, minPlatformSize, platformSizeVariation, deathTrapChance);
+            generateLinearPath(patternConfig);
             break;
         case 'zigzag':
-            generateZigzagPath(platforms, currentX, currentY, maxPlatforms, levelNumber, baseGap, minPlatformSize, platformSizeVariation, deathTrapChance);
+            generateZigzagPath(patternConfig);
             break;
         case 'tower':
-            generateTowerPath(platforms, currentX, currentY, maxPlatforms, levelNumber, baseGap, minPlatformSize, platformSizeVariation, deathTrapChance);
+            generateTowerPath(patternConfig);
             break;
         case 'valley':
-            generateValleyPath(platforms, currentX, currentY, maxPlatforms, levelNumber, baseGap, minPlatformSize, platformSizeVariation, deathTrapChance);
+            generateValleyPath(patternConfig);
             break;
         case 'scattered':
-            generateScatteredPath(platforms, currentX, currentY, maxPlatforms, levelNumber, baseGap, minPlatformSize, platformSizeVariation, deathTrapChance);
+            generateScatteredPath(patternConfig);
             break;
         case 'spiral':
-            generateSpiralPath(platforms, currentX, currentY, maxPlatforms, levelNumber, baseGap, minPlatformSize, platformSizeVariation, deathTrapChance);
+            generateSpiralPath(patternConfig);
             break;
         case 'branching':
-            generateBranchingPath(platforms, currentX, currentY, maxPlatforms, levelNumber, baseGap, minPlatformSize, platformSizeVariation, deathTrapChance);
+            generateBranchingPath(patternConfig);
             break;
         case 'pyramid':
-            generatePyramidPath(platforms, currentX, currentY, maxPlatforms, levelNumber, baseGap, minPlatformSize, platformSizeVariation, deathTrapChance);
+            generatePyramidPath(patternConfig);
             break;
     }
+    
+    // NEW: Generate secondary hybrid pattern if selected
+    if (secondaryPattern) {
+        // Find the furthest platform to continue from
+        let furthestX = 0;
+        let furthestY = 500;
+        for (let p of platforms) {
+            if (p.x > furthestX && p.color !== '#FF0000') {
+                furthestX = p.x;
+                furthestY = p.y;
+            }
+        }
+        
+        const secondConfig = {
+            platforms,
+            currentX: furthestX + 60,
+            currentY: furthestY + (Math.random() - 0.5) * 100, // Random vertical offset
+            maxPlatforms: maxPlatforms - platformsPerPattern,
+            levelNumber,
+            baseGap,
+            minPlatformSize,
+            platformSizeVariation,
+            deathTrapChance,
+            shuffleFactor: Math.random(), // Different shuffle for second pattern
+            transformType: Math.floor(Math.random() * 4)
+        };
+        
+        switch (secondaryPattern) {
+            case 'linear':
+                generateLinearPath(secondConfig);
+                break;
+            case 'zigzag':
+                generateZigzagPath(secondConfig);
+                break;
+            case 'tower':
+                generateTowerPath(secondConfig);
+                break;
+            case 'valley':
+                generateValleyPath(secondConfig);
+                break;
+            case 'scattered':
+                generateScatteredPath(secondConfig);
+                break;
+            case 'spiral':
+                generateSpiralPath(secondConfig);
+                break;
+            case 'branching':
+                generateBranchingPath(secondConfig);
+                break;
+            case 'pyramid':
+                generatePyramidPath(secondConfig);
+                break;
+        }
+    }
+    
+    // NEW: Apply random transformations to all platforms
+    applyLevelTransformations(platforms, transformType, shuffleFactor, levelNumber);
     
     // Add some random extra platforms for alternative routes
     if (levelNumber > 2 && Math.random() < 0.5) {
@@ -177,8 +293,8 @@ function generateLevelAttempt(levelNumber) {
         }
     }
     
-    // Goal platform - vary placement based on pattern
-    const goalHeight = Math.max(100, 350 - levelNumber * 6);
+    // Goal platform - MORE DRAMATIC HEIGHT DIFFERENCES
+    const goalHeight = Math.max(80, 400 - levelNumber * 12); // Much higher, faster (400 down to 80)
     const goalX = selectedPattern === 'valley' ? 400 + Math.random() * 200 : 650 + Math.random() * 100;
     const goal = {x: goalX, y: goalHeight};
     
@@ -189,6 +305,9 @@ function generateLevelAttempt(levelNumber) {
         height: 20,
         color: '#FFD700'
     });
+    
+    // Log level generation info for debugging
+    console.log(`Level ${levelNumber}: Pattern=${selectedPattern}${secondaryPattern ? '+' + secondaryPattern : ''}, Transform=${transformType}, Shuffle=${shuffleFactor.toFixed(2)}, Platforms=${platforms.length}`);
     
     return {
         platforms: platforms,
@@ -230,4 +349,70 @@ function generateFallbackLevel(levelNumber) {
         spawn: spawn,
         goal: goal
     };
+}
+
+// Apply random transformations to create unique level variations
+function applyLevelTransformations(platforms, transformType, shuffleFactor, levelNumber) {
+    // Don't transform spawn platform or goal platform
+    const nonSpecialPlatforms = platforms.filter(p => 
+        p.color !== '#8B4513' && p.color !== '#FFD700'
+    );
+    
+    // Ensure minimum shuffle strength for visible differences
+    const effectiveShuffleFactor = Math.max(shuffleFactor, 0.4);
+    
+    switch (transformType) {
+        case 0: // Vertical shuffle - shift platforms up/down randomly
+            for (let platform of nonSpecialPlatforms) {
+                if (Math.random() < effectiveShuffleFactor * 0.8 && platform.color !== '#FF0000') {
+                    const shift = (Math.random() - 0.5) * 80; // Increased from 60 to 80
+                    platform.y = Math.max(100, Math.min(560, platform.y + shift));
+                }
+            }
+            break;
+            
+        case 1: // Horizontal jitter - slight x position changes
+            for (let platform of nonSpecialPlatforms) {
+                if (Math.random() < effectiveShuffleFactor) {
+                    const jitter = (Math.random() - 0.5) * 60; // Increased from 40 to 60
+                    platform.x = Math.max(50, Math.min(700, platform.x + jitter));
+                }
+            }
+            break;
+            
+        case 2: // Size variation - randomize platform widths
+            for (let platform of nonSpecialPlatforms) {
+                if (Math.random() < effectiveShuffleFactor && platform.color !== '#FF0000') {
+                    const sizeChange = (Math.random() - 0.5) * 50; // Increased from 40 to 50
+                    platform.width = Math.max(35, Math.min(130, platform.width + sizeChange));
+                }
+            }
+            break;
+            
+        case 3: // Rotation simulation - create slanted patterns
+            // Group platforms and shift them in waves
+            const waveFrequency = 0.15 + Math.random() * 0.15; // More visible waves
+            const waveAmplitude = 50 * effectiveShuffleFactor; // Increased amplitude
+            for (let i = 0; i < nonSpecialPlatforms.length; i++) {
+                const platform = nonSpecialPlatforms[i];
+                if (platform.color !== '#FF0000') {
+                    const wave = Math.sin(i * waveFrequency) * waveAmplitude;
+                    platform.y = Math.max(100, Math.min(560, platform.y + wave));
+                }
+            }
+            break;
+    }
+    
+    // Additional random micro-adjustments for all levels (not just 5+)
+    if (levelNumber > 1) {
+        for (let platform of nonSpecialPlatforms) {
+            if (Math.random() < 0.3 && platform.color !== '#FF0000') {
+                // Increased micro-adjustments
+                platform.x += (Math.random() - 0.5) * 20;
+                platform.y += (Math.random() - 0.5) * 20;
+                platform.x = Math.max(50, Math.min(700, platform.x));
+                platform.y = Math.max(100, Math.min(560, platform.y));
+            }
+        }
+    }
 }
