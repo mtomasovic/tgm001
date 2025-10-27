@@ -1,3 +1,189 @@
+// Level definitions
+const LEVELS = [
+    // Level 1 - Very easy, just a few platforms
+    {
+        platforms: [
+            {x: 0, y: 580, width: 800, height: 20, color: '#8B4513'}, // ground
+            {x: 200, y: 520, width: 120, height: 20, color: '#009600'}, // platform
+            {x: 400, y: 460, width: 120, height: 20, color: '#009600'}, // platform
+            {x: 600, y: 420, width: 120, height: 20, color: '#FFD700'}, // goal
+        ],
+        spawn: {x: 50, y: 500},
+        goal: {x: 600, y: 420}
+    },
+    // Level 2 - Small gaps
+    {
+        platforms: [
+            {x: 0, y: 580, width: 150, height: 20, color: '#8B4513'}, // ground start
+            {x: 200, y: 580, width: 100, height: 20, color: '#8B4513'}, // ground gap
+            {x: 350, y: 580, width: 150, height: 20, color: '#8B4513'}, // ground gap
+            {x: 550, y: 580, width: 250, height: 20, color: '#8B4513'}, // ground end
+            {x: 250, y: 520, width: 80, height: 20, color: '#009600'}, // platform
+            {x: 450, y: 460, width: 80, height: 20, color: '#009600'}, // platform
+            {x: 650, y: 420, width: 100, height: 20, color: '#FFD700'}, // goal
+        ],
+        spawn: {x: 50, y: 500},
+        goal: {x: 650, y: 420}
+    },
+    // Level 3 - Higher jumps
+    {
+        platforms: [
+            {x: 0, y: 580, width: 800, height: 20, color: '#8B4513'}, // ground
+            {x: 150, y: 480, width: 80, height: 20, color: '#009600'}, // platform
+            {x: 300, y: 380, width: 80, height: 20, color: '#009600'}, // higher platform
+            {x: 500, y: 280, width: 80, height: 20, color: '#009600'}, // even higher
+            {x: 650, y: 350, width: 100, height: 20, color: '#FFD700'}, // goal
+        ],
+        spawn: {x: 50, y: 500},
+        goal: {x: 650, y: 350}
+    },
+    // Level 4 - Obstacles introduced
+    {
+        platforms: [
+            {x: 0, y: 580, width: 800, height: 20, color: '#8B4513'}, // ground
+            {x: 150, y: 520, width: 100, height: 20, color: '#009600'}, // platform
+            {x: 200, y: 480, width: 40, height: 20, color: '#960000'}, // obstacle
+            {x: 350, y: 460, width: 100, height: 20, color: '#009600'}, // platform
+            {x: 400, y: 420, width: 40, height: 20, color: '#960000'}, // obstacle
+            {x: 550, y: 400, width: 100, height: 20, color: '#009600'}, // platform
+            {x: 700, y: 360, width: 80, height: 20, color: '#FFD700'}, // goal
+        ],
+        spawn: {x: 50, y: 500},
+        goal: {x: 700, y: 360}
+    },
+    // Level 5 - Precision jumping
+    {
+        platforms: [
+            {x: 0, y: 580, width: 100, height: 20, color: '#8B4513'}, // ground start
+            {x: 150, y: 500, width: 60, height: 20, color: '#009600'}, // small platform
+            {x: 250, y: 420, width: 60, height: 20, color: '#009600'}, // small platform
+            {x: 350, y: 340, width: 60, height: 20, color: '#009600'}, // small platform
+            {x: 450, y: 260, width: 60, height: 20, color: '#009600'}, // small platform
+            {x: 550, y: 340, width: 60, height: 20, color: '#009600'}, // small platform
+            {x: 650, y: 420, width: 60, height: 20, color: '#009600'}, // small platform
+            {x: 720, y: 580, width: 80, height: 20, color: '#8B4513'}, // ground end
+            {x: 720, y: 380, width: 80, height: 20, color: '#FFD700'}, // goal
+        ],
+        spawn: {x: 50, y: 500},
+        goal: {x: 720, y: 380}
+    },
+    // Level 6 - Moving platforms concept (static for now)
+    {
+        platforms: [
+            {x: 0, y: 580, width: 800, height: 20, color: '#8B4513'}, // ground
+            {x: 120, y: 480, width: 80, height: 20, color: '#009600'}, // platform
+            {x: 250, y: 400, width: 60, height: 20, color: '#009600'}, // platform
+            {x: 350, y: 480, width: 60, height: 20, color: '#009600'}, // platform
+            {x: 450, y: 360, width: 60, height: 20, color: '#009600'}, // platform
+            {x: 550, y: 440, width: 60, height: 20, color: '#009600'}, // platform
+            {x: 200, y: 520, width: 40, height: 20, color: '#960000'}, // obstacle
+            {x: 400, y: 520, width: 40, height: 20, color: '#960000'}, // obstacle
+            {x: 600, y: 520, width: 40, height: 20, color: '#960000'}, // obstacle
+            {x: 680, y: 380, width: 100, height: 20, color: '#FFD700'}, // goal
+        ],
+        spawn: {x: 50, y: 500},
+        goal: {x: 680, y: 380}
+    },
+    // Level 7 - Narrow passages
+    {
+        platforms: [
+            {x: 0, y: 580, width: 150, height: 20, color: '#8B4513'}, // ground start
+            {x: 200, y: 580, width: 40, height: 20, color: '#8B4513'}, // narrow ground
+            {x: 280, y: 580, width: 40, height: 20, color: '#8B4513'}, // narrow ground
+            {x: 360, y: 580, width: 40, height: 20, color: '#8B4513'}, // narrow ground
+            {x: 440, y: 580, width: 40, height: 20, color: '#8B4513'}, // narrow ground
+            {x: 520, y: 580, width: 280, height: 20, color: '#8B4513'}, // ground end
+            {x: 150, y: 460, width: 60, height: 20, color: '#009600'}, // platform
+            {x: 300, y: 400, width: 60, height: 20, color: '#009600'}, // platform
+            {x: 450, y: 340, width: 60, height: 20, color: '#009600'}, // platform
+            {x: 600, y: 380, width: 60, height: 20, color: '#009600'}, // platform
+            {x: 220, y: 500, width: 40, height: 20, color: '#960000'}, // obstacle
+            {x: 380, y: 440, width: 40, height: 20, color: '#960000'}, // obstacle
+            {x: 700, y: 320, width: 80, height: 20, color: '#FFD700'}, // goal
+        ],
+        spawn: {x: 50, y: 500},
+        goal: {x: 700, y: 320}
+    },
+    // Level 8 - Vertical maze
+    {
+        platforms: [
+            {x: 0, y: 580, width: 800, height: 20, color: '#8B4513'}, // ground
+            {x: 100, y: 480, width: 80, height: 20, color: '#009600'}, // platform
+            {x: 250, y: 380, width: 80, height: 20, color: '#009600'}, // platform
+            {x: 100, y: 280, width: 80, height: 20, color: '#009600'}, // platform
+            {x: 400, y: 180, width: 80, height: 20, color: '#009600'}, // platform
+            {x: 600, y: 280, width: 80, height: 20, color: '#009600'}, // platform
+            {x: 450, y: 380, width: 80, height: 20, color: '#009600'}, // platform
+            {x: 550, y: 480, width: 80, height: 20, color: '#009600'}, // platform
+            {x: 150, y: 420, width: 40, height: 20, color: '#960000'}, // obstacle
+            {x: 350, y: 320, width: 40, height: 20, color: '#960000'}, // obstacle
+            {x: 500, y: 220, width: 40, height: 20, color: '#960000'}, // obstacle
+            {x: 650, y: 220, width: 40, height: 20, color: '#960000'}, // obstacle
+            {x: 700, y: 160, width: 80, height: 20, color: '#FFD700'}, // goal
+        ],
+        spawn: {x: 50, y: 500},
+        goal: {x: 700, y: 160}
+    },
+    // Level 9 - Complex obstacle course
+    {
+        platforms: [
+            {x: 0, y: 580, width: 100, height: 20, color: '#8B4513'}, // ground start
+            {x: 150, y: 580, width: 50, height: 20, color: '#8B4513'}, // ground segment
+            {x: 250, y: 580, width: 50, height: 20, color: '#8B4513'}, // ground segment
+            {x: 350, y: 580, width: 50, height: 20, color: '#8B4513'}, // ground segment
+            {x: 450, y: 580, width: 50, height: 20, color: '#8B4513'}, // ground segment
+            {x: 550, y: 580, width: 250, height: 20, color: '#8B4513'}, // ground end
+            {x: 120, y: 480, width: 60, height: 20, color: '#009600'}, // platform
+            {x: 220, y: 400, width: 60, height: 20, color: '#009600'}, // platform
+            {x: 320, y: 320, width: 60, height: 20, color: '#009600'}, // platform
+            {x: 420, y: 240, width: 60, height: 20, color: '#009600'}, // platform
+            {x: 520, y: 160, width: 60, height: 20, color: '#009600'}, // platform
+            {x: 620, y: 240, width: 60, height: 20, color: '#009600'}, // platform
+            {x: 720, y: 320, width: 60, height: 20, color: '#009600'}, // platform
+            {x: 170, y: 520, width: 30, height: 20, color: '#960000'}, // obstacle
+            {x: 270, y: 440, width: 30, height: 20, color: '#960000'}, // obstacle
+            {x: 370, y: 360, width: 30, height: 20, color: '#960000'}, // obstacle
+            {x: 470, y: 280, width: 30, height: 20, color: '#960000'}, // obstacle
+            {x: 570, y: 200, width: 30, height: 20, color: '#960000'}, // obstacle
+            {x: 670, y: 280, width: 30, height: 20, color: '#960000'}, // obstacle
+            {x: 720, y: 120, width: 80, height: 20, color: '#FFD700'}, // goal
+        ],
+        spawn: {x: 50, y: 500},
+        goal: {x: 720, y: 120}
+    },
+    // Level 10 - Final challenge
+    {
+        platforms: [
+            {x: 0, y: 580, width: 80, height: 20, color: '#8B4513'}, // ground start
+            {x: 120, y: 520, width: 40, height: 20, color: '#009600'}, // platform
+            {x: 200, y: 460, width: 40, height: 20, color: '#009600'}, // platform
+            {x: 280, y: 400, width: 40, height: 20, color: '#009600'}, // platform
+            {x: 360, y: 340, width: 40, height: 20, color: '#009600'}, // platform
+            {x: 440, y: 280, width: 40, height: 20, color: '#009600'}, // platform
+            {x: 520, y: 220, width: 40, height: 20, color: '#009600'}, // platform
+            {x: 600, y: 160, width: 40, height: 20, color: '#009600'}, // platform
+            {x: 680, y: 100, width: 40, height: 20, color: '#009600'}, // platform
+            {x: 600, y: 40, width: 40, height: 20, color: '#009600'}, // platform
+            {x: 520, y: 100, width: 40, height: 20, color: '#009600'}, // platform
+            {x: 440, y: 160, width: 40, height: 20, color: '#009600'}, // platform
+            {x: 360, y: 220, width: 40, height: 20, color: '#009600'}, // platform
+            {x: 280, y: 280, width: 40, height: 20, color: '#009600'}, // platform
+            {x: 720, y: 580, width: 80, height: 20, color: '#8B4513'}, // ground end
+            {x: 140, y: 560, width: 20, height: 20, color: '#960000'}, // obstacle
+            {x: 220, y: 500, width: 20, height: 20, color: '#960000'}, // obstacle
+            {x: 300, y: 440, width: 20, height: 20, color: '#960000'}, // obstacle
+            {x: 380, y: 380, width: 20, height: 20, color: '#960000'}, // obstacle
+            {x: 460, y: 320, width: 20, height: 20, color: '#960000'}, // obstacle
+            {x: 540, y: 260, width: 20, height: 20, color: '#960000'}, // obstacle
+            {x: 620, y: 200, width: 20, height: 20, color: '#960000'}, // obstacle
+            {x: 700, y: 140, width: 20, height: 20, color: '#960000'}, // obstacle
+            {x: 720, y: 20, width: 80, height: 20, color: '#FFD700'}, // goal at top
+        ],
+        spawn: {x: 40, y: 500},
+        goal: {x: 720, y: 20}
+    }
+];
+
 // Simple Canvas Game (fallback if p5.js doesn't work)
 function createCanvasGame() {
     const canvas = document.createElement('canvas');
@@ -49,9 +235,12 @@ function createCanvasGame() {
     
     // Game state
     const game = {
+        currentLevel: 0,
+        levelComplete: false,
+        showLevelComplete: false,
         player: {
-            x: 50 * scaleX,
-            y: 100 * scaleY,
+            x: 0,
+            y: 0,
             vx: 0,
             vy: 0,
             width: 20 * scaleX,
@@ -61,26 +250,58 @@ function createCanvasGame() {
             onGround: false,
             facing: 1
         },
-        platforms: [
-            {x: 0, y: canvas.height - 20 * scaleY, width: canvas.width, height: 20 * scaleY, color: '#8B4513'}, // ground
-            {x: 150 * scaleX, y: canvas.height - 80 * scaleY, width: 100 * scaleX, height: 20 * scaleY, color: '#009600'}, // first platform
-            {x: 300 * scaleX, y: canvas.height - 140 * scaleY, width: 80 * scaleX, height: 20 * scaleY, color: '#009600'}, // second platform
-            {x: 450 * scaleX, y: canvas.height - 200 * scaleY, width: 100 * scaleX, height: 20 * scaleY, color: '#009600'}, // third platform
-            {x: 600 * scaleX, y: canvas.height - 120 * scaleY, width: 80 * scaleX, height: 20 * scaleY, color: '#009600'}, // fourth platform
-            {x: 200 * scaleX, y: canvas.height - 180 * scaleY, width: 60 * scaleX, height: 20 * scaleY, color: '#960000'}, // red obstacle
-            {x: 380 * scaleX, y: canvas.height - 260 * scaleY, width: 60 * scaleX, height: 20 * scaleY, color: '#960000'}, // red obstacle
-            {x: 700 * scaleX, y: canvas.height - 180 * scaleY, width: 80 * scaleX, height: 20 * scaleY, color: '#FFD700'}, // goal platform
-        ],
+        platforms: [],
         keys: {},
         frameCount: 0,
         scaleX: scaleX,
         scaleY: scaleY
     };
     
+    // Load level function
+    function loadLevel(levelIndex) {
+        if (levelIndex >= LEVELS.length) {
+            // Game completed
+            return;
+        }
+        
+        const level = LEVELS[levelIndex];
+        game.platforms = level.platforms.map(p => ({
+            x: p.x * scaleX,
+            y: p.y * scaleY,
+            width: p.width * scaleX,
+            height: p.height * scaleY,
+            color: p.color
+        }));
+        
+        // Set player spawn position
+        game.player.x = level.spawn.x * scaleX;
+        game.player.y = level.spawn.y * scaleY;
+        game.player.vx = 0;
+        game.player.vy = 0;
+        game.levelComplete = false;
+        game.showLevelComplete = false;
+    }
+    
+    // Initialize first level
+    loadLevel(0);
+    
     // Input handling
     function handleKeyDown(e) {
         game.keys[e.key] = true;
         game.keys[e.code] = true;
+        
+        // Handle next level confirmation
+        if ((e.key === 'Enter' || e.key === ' ') && game.showLevelComplete) {
+            if (game.currentLevel < LEVELS.length - 1) {
+                game.currentLevel++;
+                loadLevel(game.currentLevel);
+            } else {
+                // Game completed - could restart or show final message
+                game.currentLevel = 0;
+                loadLevel(game.currentLevel);
+            }
+        }
+        
         e.preventDefault();
     }
     
@@ -92,6 +313,32 @@ function createCanvasGame() {
     
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('keyup', handleKeyUp);
+    
+    // Add click handler for next level button
+    canvas.addEventListener('click', (e) => {
+        if (game.showLevelComplete) {
+            const rect = canvas.getBoundingClientRect();
+            const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
+            
+            // Check if click is on button
+            const buttonWidth = 200 * game.scaleX;
+            const buttonHeight = 50 * game.scaleY;
+            const buttonX = canvas.width/2 - buttonWidth/2;
+            const buttonY = canvas.height/2 + 20 * game.scaleY;
+            
+            if (clickX >= buttonX && clickX <= buttonX + buttonWidth &&
+                clickY >= buttonY && clickY <= buttonY + buttonHeight) {
+                if (game.currentLevel < LEVELS.length - 1) {
+                    game.currentLevel++;
+                    loadLevel(game.currentLevel);
+                } else {
+                    game.currentLevel = 0;
+                    loadLevel(game.currentLevel);
+                }
+            }
+        }
+    });
     
     // Game logic
     function updatePlayer() {
@@ -141,15 +388,19 @@ function createCanvasGame() {
                 const platformTop = platform.y;
                 const platformBottom = platform.y + platform.height;
                 const platformLeft = platform.x;
-                const platformRight = platform.x + platform.width;
-                
-                // Vertical collisions (prioritize these)
-                if (p.vy > 0 && playerBottom > platformTop && playerTop < platformTop) {
-                    // Landing on top
-                    p.y = platformTop - p.height;
-                    p.vy = 0;
-                    p.onGround = true;
-                } else if (p.vy < 0 && playerTop < platformBottom && playerBottom > platformBottom) {
+                const platformRight = platform.x + platform.width;                    // Vertical collisions (prioritize these)
+                    if (p.vy > 0 && playerBottom > platformTop && playerTop < platformTop) {
+                        // Landing on top
+                        p.y = platformTop - p.height;
+                        p.vy = 0;
+                        p.onGround = true;
+                        
+                        // Check if it's the goal platform (yellow)
+                        if (platform.color === '#FFD700' && !game.levelComplete) {
+                            game.levelComplete = true;
+                            game.showLevelComplete = true;
+                        }
+                    } else if (p.vy < 0 && playerTop < platformBottom && playerBottom > platformBottom) {
                     // Hitting from below
                     p.y = platformBottom;
                     p.vy = 0;
@@ -172,9 +423,10 @@ function createCanvasGame() {
         if (p.x < 0) p.x = 0;
         if (p.x > canvas.width - p.width) p.x = canvas.width - p.width;
         if (p.y > canvas.height) {
-            // Respawn
-            p.x = 50 * game.scaleX;
-            p.y = 100 * game.scaleY;
+            // Respawn at level spawn point
+            const level = LEVELS[game.currentLevel];
+            p.x = level.spawn.x * game.scaleX;
+            p.y = level.spawn.y * game.scaleY;
             p.vx = 0;
             p.vy = 0;
         }
@@ -261,23 +513,68 @@ function createCanvasGame() {
         ctx.fillStyle = '#87CEEB';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
+        // Draw level indicator
+        ctx.fillStyle = '#000';
+        ctx.font = `${Math.max(16, 20 * Math.min(game.scaleX, game.scaleY))}px Arial`;
+        ctx.textAlign = 'left';
+        ctx.fillText(`Level ${game.currentLevel + 1}`, 10, 30);
+        
         // Draw platforms
         drawPlatforms();
         
-        // Update and draw player
-        updatePlayer();
+        // Update and draw player (only if level not complete)
+        if (!game.levelComplete) {
+            updatePlayer();
+        }
         drawStickman();
         
-        // Draw goal message if player reaches the end
-        if (game.player.x > 700 * game.scaleX && game.player.y < canvas.height - 200 * game.scaleY) {
+        // Draw level completion message and button
+        if (game.showLevelComplete) {
+            // Semi-transparent overlay
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Level complete message
             ctx.fillStyle = '#FFD700';
             ctx.strokeStyle = '#000';
-            ctx.lineWidth = 2 * game.scaleX;
-            const goalFontSize = Math.max(20, 32 * Math.min(game.scaleX, game.scaleY));
-            ctx.font = `${goalFontSize}px Arial`;
+            ctx.lineWidth = 3 * game.scaleX;
+            const titleFontSize = Math.max(24, 36 * Math.min(game.scaleX, game.scaleY));
+            ctx.font = `bold ${titleFontSize}px Arial`;
             ctx.textAlign = 'center';
-            ctx.fillText('GOAL REACHED!', canvas.width/2, canvas.height/2);
-            ctx.strokeText('GOAL REACHED!', canvas.width/2, canvas.height/2);
+            
+            if (game.currentLevel < LEVELS.length - 1) {
+                ctx.fillText('LEVEL COMPLETE!', canvas.width/2, canvas.height/2 - 40 * game.scaleY);
+                ctx.strokeText('LEVEL COMPLETE!', canvas.width/2, canvas.height/2 - 40 * game.scaleY);
+            } else {
+                ctx.fillText('GAME COMPLETE!', canvas.width/2, canvas.height/2 - 40 * game.scaleY);
+                ctx.strokeText('GAME COMPLETE!', canvas.width/2, canvas.height/2 - 40 * game.scaleY);
+            }
+            
+            // Next level button
+            const buttonWidth = 200 * game.scaleX;
+            const buttonHeight = 50 * game.scaleY;
+            const buttonX = canvas.width/2 - buttonWidth/2;
+            const buttonY = canvas.height/2 + 20 * game.scaleY;
+            
+            ctx.fillStyle = '#4CAF50';
+            ctx.strokeStyle = '#2E7D32';
+            ctx.lineWidth = 3 * game.scaleX;
+            ctx.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
+            ctx.strokeRect(buttonX, buttonY, buttonWidth, buttonHeight);
+            
+            // Button text
+            ctx.fillStyle = 'white';
+            const buttonFontSize = Math.max(16, 20 * Math.min(game.scaleX, game.scaleY));
+            ctx.font = `bold ${buttonFontSize}px Arial`;
+            const buttonText = game.currentLevel < LEVELS.length - 1 ? 'NEXT LEVEL' : 'RESTART GAME';
+            ctx.fillText(buttonText, canvas.width/2, buttonY + buttonHeight/2 + 6 * game.scaleY);
+            
+            // Instructions
+            ctx.fillStyle = '#FFF';
+            const instructFontSize = Math.max(12, 16 * Math.min(game.scaleX, game.scaleY));
+            ctx.font = `${instructFontSize}px Arial`;
+            ctx.fillText('Press SPACE or ENTER to continue', canvas.width/2, buttonY + buttonHeight + 30 * game.scaleY);
+            
             ctx.textAlign = 'left';
         }
         
@@ -313,6 +610,41 @@ function createGame() {
             let player;
             let platforms = [];
             let keys = {};
+            let currentLevel = 0;
+            let levelComplete = false;
+            let showLevelComplete = false;
+            
+            // Load level function for p5.js
+            function loadLevel(levelIndex) {
+                if (levelIndex >= LEVELS.length) {
+                    return;
+                }
+                
+                const level = LEVELS[levelIndex];
+                const scaleX = p.width / 800;
+                const scaleY = p.height / 600;
+                
+                platforms = level.platforms.map(platform => 
+                    new Platform(
+                        platform.x * scaleX, 
+                        platform.y * scaleY, 
+                        platform.width * scaleX, 
+                        platform.height * scaleY, 
+                        platform.color === '#8B4513' ? [139, 69, 19] :
+                        platform.color === '#009600' ? [0, 150, 0] :
+                        platform.color === '#960000' ? [150, 0, 0] :
+                        platform.color === '#FFD700' ? [255, 215, 0] : [100, 100, 100]
+                    )
+                );
+                
+                // Set player spawn position
+                player.x = level.spawn.x * scaleX;
+                player.y = level.spawn.y * scaleY;
+                player.vx = 0;
+                player.vy = 0;
+                levelComplete = false;
+                showLevelComplete = false;
+            }
             
             class Player {
                 constructor(x, y, scaleX, scaleY) {
@@ -379,6 +711,12 @@ function createGame() {
                                 this.y = platformTop - this.height;
                                 this.vy = 0;
                                 this.onGround = true;
+                                
+                                // Check if it's the goal platform (yellow)
+                                if (platform.color[0] === 255 && platform.color[1] === 215 && platform.color[2] === 0 && !levelComplete) {
+                                    levelComplete = true;
+                                    showLevelComplete = true;
+                                }
                             } else if (this.vy < 0 && playerTop < platformBottom && playerBottom > platformBottom) {
                                 // Hitting from below
                                 this.y = platformBottom;
@@ -401,9 +739,12 @@ function createGame() {
                     if (this.x < 0) this.x = 0;
                     if (this.x > p.width - this.width) this.x = p.width - this.width;
                     if (this.y > p.height) {
-                        // Respawn at original position
-                        this.x = 50 * (window.p5ScaleX || 1);
-                        this.y = 100 * (window.p5ScaleY || 1);
+                        // Respawn at level spawn point
+                        const level = LEVELS[currentLevel];
+                        const scaleX = p.width / 800;
+                        const scaleY = p.height / 600;
+                        this.x = level.spawn.x * scaleX;
+                        this.y = level.spawn.y * scaleY;
                         this.vx = 0;
                         this.vy = 0;
                     }
@@ -489,16 +830,10 @@ function createGame() {
                 const scaleX = canvasWidth / 800;
                 const scaleY = canvasHeight / 600;
                 
-                player = new Player(50 * scaleX, 100 * scaleY, scaleX, scaleY);
+                player = new Player(0, 0, scaleX, scaleY);
                 
-                platforms = [
-                    new Platform(0, p.height - 20 * scaleY, p.width, 20 * scaleY, [139, 69, 19]),
-                    new Platform(150 * scaleX, p.height - 80 * scaleY, 100 * scaleX, 20 * scaleY, [0, 150, 0]),
-                    new Platform(300 * scaleX, p.height - 140 * scaleY, 80 * scaleX, 20 * scaleY, [0, 150, 0]),
-                    new Platform(450 * scaleX, p.height - 200 * scaleY, 100 * scaleX, 20 * scaleY, [0, 150, 0]),
-                    new Platform(600 * scaleX, p.height - 120 * scaleY, 80 * scaleX, 20 * scaleY, [0, 150, 0]),
-                    new Platform(700 * scaleX, p.height - 180 * scaleY, 80 * scaleX, 20 * scaleY, [255, 215, 0]),
-                ];
+                // Load first level
+                loadLevel(0);
                 
                 // Store scale factors globally for p5.js version
                 window.p5ScaleX = scaleX;
@@ -508,22 +843,109 @@ function createGame() {
             p.draw = () => {
                 p.background(135, 206, 235);
                 
+                // Draw level indicator
+                p.fill(0);
+                p.textAlign(p.LEFT);
+                p.textSize(Math.max(16, 20 * Math.min(p.width/800, p.height/600)));
+                p.text(`Level ${currentLevel + 1}`, 10, 30);
+                
                 for (let platform of platforms) {
                     platform.draw();
                 }
                 
-                player.update();
+                // Update and draw player (only if level not complete)
+                if (!levelComplete) {
+                    player.update();
+                }
                 player.draw();
+                
+                // Draw level completion message and button
+                if (showLevelComplete) {
+                    // Semi-transparent overlay
+                    p.fill(0, 0, 0, 180);
+                    p.rect(0, 0, p.width, p.height);
+                    
+                    // Level complete message
+                    p.fill(255, 215, 0);
+                    p.stroke(0);
+                    p.strokeWeight(3);
+                    p.textAlign(p.CENTER);
+                    const titleFontSize = Math.max(24, 36 * Math.min(p.width/800, p.height/600));
+                    p.textSize(titleFontSize);
+                    
+                    if (currentLevel < LEVELS.length - 1) {
+                        p.text('LEVEL COMPLETE!', p.width/2, p.height/2 - 40);
+                    } else {
+                        p.text('GAME COMPLETE!', p.width/2, p.height/2 - 40);
+                    }
+                    
+                    // Next level button
+                    const buttonWidth = 200 * (p.width/800);
+                    const buttonHeight = 50 * (p.height/600);
+                    const buttonX = p.width/2 - buttonWidth/2;
+                    const buttonY = p.height/2 + 20;
+                    
+                    p.fill(76, 175, 80);
+                    p.stroke(46, 125, 50);
+                    p.strokeWeight(3);
+                    p.rect(buttonX, buttonY, buttonWidth, buttonHeight);
+                    
+                    // Button text
+                    p.fill(255);
+                    p.noStroke();
+                    const buttonFontSize = Math.max(16, 20 * Math.min(p.width/800, p.height/600));
+                    p.textSize(buttonFontSize);
+                    const buttonText = currentLevel < LEVELS.length - 1 ? 'NEXT LEVEL' : 'RESTART GAME';
+                    p.text(buttonText, p.width/2, buttonY + buttonHeight/2 + 6);
+                    
+                    // Instructions
+                    const instructFontSize = Math.max(12, 16 * Math.min(p.width/800, p.height/600));
+                    p.textSize(instructFontSize);
+                    p.text('Press SPACE or ENTER to continue', p.width/2, buttonY + buttonHeight + 30);
+                    p.text('or tap the button on mobile', p.width/2, buttonY + buttonHeight + 50);
+                }
             };
             
             p.keyPressed = () => {
                 keys[p.key] = true;
                 keys[p.keyCode] = true;
+                
+                // Handle next level confirmation
+                if ((p.key === 'Enter' || p.key === ' ') && showLevelComplete) {
+                    if (currentLevel < LEVELS.length - 1) {
+                        currentLevel++;
+                        loadLevel(currentLevel);
+                    } else {
+                        currentLevel = 0;
+                        loadLevel(currentLevel);
+                    }
+                }
             };
             
             p.keyReleased = () => {
                 keys[p.key] = false;
                 keys[p.keyCode] = false;
+            };
+            
+            p.mousePressed = () => {
+                if (showLevelComplete) {
+                    // Check if click is on button
+                    const buttonWidth = 200 * (p.width/800);
+                    const buttonHeight = 50 * (p.height/600);
+                    const buttonX = p.width/2 - buttonWidth/2;
+                    const buttonY = p.height/2 + 20;
+                    
+                    if (p.mouseX >= buttonX && p.mouseX <= buttonX + buttonWidth &&
+                        p.mouseY >= buttonY && p.mouseY <= buttonY + buttonHeight) {
+                        if (currentLevel < LEVELS.length - 1) {
+                            currentLevel++;
+                            loadLevel(currentLevel);
+                        } else {
+                            currentLevel = 0;
+                            loadLevel(currentLevel);
+                        }
+                    }
+                }
             };
         };
         
@@ -690,6 +1112,7 @@ class VirtualGamepad {
             jumpBtn.style.transform = 'scale(0.9)';
             this.keys['ArrowUp'] = true;
             this.keys[' '] = true;
+            this.keys['Enter'] = true; // Also trigger Enter for level completion
         });
         
         jumpBtn.addEventListener('touchend', (e) => {
@@ -698,6 +1121,7 @@ class VirtualGamepad {
             jumpBtn.style.transform = 'scale(1)';
             this.keys['ArrowUp'] = false;
             this.keys[' '] = false;
+            this.keys['Enter'] = false;
         });
         
         actionContainer.appendChild(jumpBtn);
