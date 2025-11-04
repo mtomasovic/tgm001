@@ -133,6 +133,11 @@ All files validated with no errors.
 - **Fixed**: Changed `const secondRandom` to `let secondRandom` to allow reassignment in pattern selection loop
 - **Fixed**: Added pattern tracking reset for Level 1 to ensure fresh randomization on page refresh
 - **Enhanced**: Added timestamp component to `levelSeed` for true randomness across page refreshes
+- **CRITICAL FIX**: Pattern tracking now resets on new game start (not just Level 1)
+  - Added `resetLevelGeneration()` function called when creating new game
+  - Auto-reset if more than 2 seconds between level generations (indicates new game)
+  - Fisher-Yates shuffle applied to pattern array before selection
+  - Enhanced console logging with timestamps to track uniqueness
 - **MAJOR FIX**: Dramatically increased variation ranges for Level 1 to ensure visible differences on refresh:
   - Starting platform X: 0-60px (was 0-50px conditionally)
   - Starting platform Y: 570-590px (was fixed 580px)

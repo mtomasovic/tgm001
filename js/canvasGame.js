@@ -2,6 +2,11 @@
 // This file contains the Canvas-based game implementation (fallback when p5.js is not available)
 
 function createCanvasGame() {
+    // Reset level generation state when creating a new game
+    if (typeof resetLevelGeneration === 'function') {
+        resetLevelGeneration();
+    }
+    
     const canvas = document.createElement('canvas');
     
     // Calculate responsive canvas size

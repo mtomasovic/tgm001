@@ -2,6 +2,11 @@
 // This file contains the p5.js-based game implementation
 
 function createP5Game() {
+    // Reset level generation state when creating a new game
+    if (typeof resetLevelGeneration === 'function') {
+        resetLevelGeneration();
+    }
+    
     // Create virtual gamepad for p5.js version too
     const gamepad = new VirtualGamepad();
     

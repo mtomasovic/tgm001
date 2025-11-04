@@ -3,13 +3,25 @@
 
 // Track last used patterns to ensure variety
 let lastUsedPatterns = [];
+let lastGenerationTime = 0;
+
+// Reset level generation state (call when starting a new game)
+function resetLevelGeneration() {
+    lastUsedPatterns = [];
+    lastGenerationTime = 0;
+    console.log('Level generation state reset');
+}
 
 // Random Level Generator
 function generateLevel(levelNumber) {
-    // Reset pattern tracking for Level 1 to ensure variety on page refresh
-    if (levelNumber === 1) {
+    // Reset pattern tracking for Level 1 to ensure variety on page refresh or new game
+    // Also reset if it's been more than 2 seconds since last generation (indicates new game)
+    const currentTime = Date.now();
+    if (levelNumber === 1 || (currentTime - lastGenerationTime) > 2000) {
         lastUsedPatterns = [];
+        console.log('Pattern tracking reset for new game session');
     }
+    lastGenerationTime = currentTime;
     
     let attempts = 0;
     const maxAttempts = 10;
@@ -109,16 +121,27 @@ function generateLevelAttempt(levelNumber) {
         {name: 'pyramid', weight: 1}
     ];
     
+    // Shuffle patterns array for more randomness (Fisher-Yates shuffle)
+    const shuffledPatterns = [...patterns];
+    for (let i = shuffledPatterns.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffledPatterns[i], shuffledPatterns[j]] = [shuffledPatterns[j], shuffledPatterns[i]];
+    }
+    
     // Filter out recently used patterns for more variety
-    let availablePatterns = patterns;
+    let availablePatterns = shuffledPatterns;
     if (lastUsedPatterns.length > 0) {
         const lastPattern = lastUsedPatterns[lastUsedPatterns.length - 1];
-        availablePatterns = patterns.filter(p => p.name !== lastPattern);
+        availablePatterns = shuffledPatterns.filter(p => p.name !== lastPattern);
+        // Ensure we always have patterns available
+        if (availablePatterns.length === 0) {
+            availablePatterns = shuffledPatterns;
+        }
     }
     
     const totalWeight = availablePatterns.reduce((sum, p) => sum + p.weight, 0);
     let random = Math.random() * totalWeight;
-    let selectedPattern = 'linear';
+    let selectedPattern = availablePatterns[0].name; // Fallback to first available
     
     for (let pattern of availablePatterns) {
         random -= pattern.weight;
@@ -324,7 +347,8 @@ function generateLevelAttempt(levelNumber) {
     });
     
     // Log level generation info for debugging - ENHANCED LOGGING
-    console.log(`Level ${levelNumber}: Pattern=${selectedPattern}${secondaryPattern ? '+' + secondaryPattern : ''}, Transform=${transformType}, Shuffle=${shuffleFactor.toFixed(2)}, Platforms=${platforms.length}, GoalPos=(${Math.round(goal.x)},${Math.round(goal.y)}), StartX=${Math.round(currentX)}`);
+    const timestamp = Date.now() % 100000; // Last 5 digits for uniqueness
+    console.log(`[${timestamp}] Level ${levelNumber}: Pattern=${selectedPattern}${secondaryPattern ? '+' + secondaryPattern : ''}, Transform=${transformType}, Shuffle=${shuffleFactor.toFixed(2)}, Platforms=${platforms.length}, GoalPos=(${Math.round(goal.x)},${Math.round(goal.y)}), StartX=${Math.round(currentX)}`);
     
     return {
         platforms: platforms,
