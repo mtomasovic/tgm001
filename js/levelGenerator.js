@@ -121,26 +121,54 @@ function generateLevel(levelNumber) {
 
 // Helper function to check if a level is mathematically completable
 function isLevelCompletable(level) {
-    const jumpHeight = 12 * 2; // Single jump height * 2 for double jump
-    const jumpDistance = 5 * 20; // Speed * frames (approximate horizontal distance in a jump)
+    // More generous physics for validation - player can actually achieve these
+    const jumpHeight = 150; // Realistic max height player can reach with double jump
+    const jumpDistance = 200; // Realistic max horizontal distance with running + double jump
     
-    // Start from spawn point
+    // Start from spawn point - check from starting platform
     const visited = new Set();
-    const queue = [{x: level.spawn.x, y: level.spawn.y}];
+    const queue = [];
+    
+    // Find the starting platform and add it to queue
+    for (let platform of level.platforms) {
+        if (platform.color === '#8B4513') { // Brown = starting platform
+            // Add multiple points on the starting platform for better coverage
+            queue.push({x: platform.x + platform.width/4, y: platform.y});
+            queue.push({x: platform.x + platform.width/2, y: platform.y});
+            queue.push({x: platform.x + 3*platform.width/4, y: platform.y});
+            break;
+        }
+    }
+    
+    // Also add spawn point itself
+    queue.push({x: level.spawn.x, y: level.spawn.y});
     
     while (queue.length > 0) {
         const current = queue.shift();
-        const key = `${Math.floor(current.x/10)},${Math.floor(current.y/10)}`;
+        const key = `${Math.floor(current.x/20)},${Math.floor(current.y/20)}`; // Larger grid for efficiency
         
         if (visited.has(key)) continue;
         visited.add(key);
         
-        // Check if we can reach the goal from current position
-        const distanceToGoal = Math.abs(current.x - level.goal.x);
-        const heightToGoal = current.y - level.goal.y; // Positive means goal is higher
-        
-        if (distanceToGoal <= jumpDistance && heightToGoal <= jumpHeight && heightToGoal >= -200) {
-            return true; // Goal is reachable
+        // Check if we can reach the goal platform from current position
+        const goalPlatform = level.platforms.find(p => p.color === '#FFD700');
+        if (goalPlatform) {
+            // Check multiple points on goal platform
+            const goalPoints = [
+                {x: goalPlatform.x, y: goalPlatform.y},
+                {x: goalPlatform.x + goalPlatform.width/2, y: goalPlatform.y},
+                {x: goalPlatform.x + goalPlatform.width, y: goalPlatform.y}
+            ];
+            
+            for (let goalPoint of goalPoints) {
+                const distanceToGoal = Math.abs(current.x - goalPoint.x);
+                const heightToGoal = current.y - goalPoint.y; // Positive means goal is higher
+                
+                // Can reach goal if within jump range
+                if (distanceToGoal <= jumpDistance && heightToGoal <= jumpHeight && heightToGoal >= -500) {
+                    return true; // Goal is reachable!
+                }
+            }
         }
         
         // Find all platforms reachable from current position
@@ -148,13 +176,24 @@ function isLevelCompletable(level) {
             // Skip death traps for pathfinding
             if (platform.color === '#FF0000') continue;
             
-            const distanceTo = Math.abs(current.x - platform.x);
-            const heightDiff = current.y - platform.y; // Positive means platform is higher
+            // Check multiple points on each platform (left, center, right)
+            const platformPoints = [
+                {x: platform.x + 10, y: platform.y},
+                {x: platform.x + platform.width/2, y: platform.y},
+                {x: platform.x + platform.width - 10, y: platform.y}
+            ];
             
-            // Check if platform is reachable with double jump
-            if (distanceTo <= jumpDistance && heightDiff <= jumpHeight && heightDiff >= -300) {
-                // Add platform position to queue
-                queue.push({x: platform.x + platform.width/2, y: platform.y});
+            for (let point of platformPoints) {
+                const distanceTo = Math.abs(current.x - point.x);
+                const heightDiff = current.y - point.y; // Positive means platform is higher
+                
+                // Check if platform is reachable with double jump
+                if (distanceTo <= jumpDistance && heightDiff <= jumpHeight && heightDiff >= -500) {
+                    const pointKey = `${Math.floor(point.x/20)},${Math.floor(point.y/20)}`;
+                    if (!visited.has(pointKey)) {
+                        queue.push(point);
+                    }
+                }
             }
         }
     }
