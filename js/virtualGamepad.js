@@ -24,8 +24,8 @@ class VirtualGamepad {
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
-            width: 320px;
-            height: 120px;
+            width: 350px;
+            height: 130px;
             background: rgba(0, 0, 0, 0.3);
             border-radius: 15px;
             display: flex;
@@ -48,15 +48,15 @@ class VirtualGamepad {
         const dpadContainer = document.createElement('div');
         dpadContainer.style.cssText = `
             position: relative;
-            width: 100px;
-            height: 100px;
+            width: 120px;
+            height: 120px;
         `;
         
-        // Create directional buttons
-        this.createDPadButton('↑', 35, 0, 'ArrowUp');
-        this.createDPadButton('↓', 35, 70, 'ArrowDown');
-        this.createDPadButton('←', 0, 35, 'ArrowLeft');
-        this.createDPadButton('→', 70, 35, 'ArrowRight');
+        // Create directional buttons with adjusted spacing
+        this.createDPadButton('↑', 42, 0, 'ArrowUp');
+        this.createDPadButton('↓', 42, 84, 'ArrowDown');
+        this.createDPadButton('←', 0, 42, 'ArrowLeft');
+        this.createDPadButton('→', 84, 42, 'ArrowRight');
         
         dpadContainer.appendChild(this.upButton);
         dpadContainer.appendChild(this.downButton);
@@ -73,15 +73,15 @@ class VirtualGamepad {
             position: absolute;
             left: ${left}px;
             top: ${top}px;
-            width: 30px;
-            height: 30px;
+            width: 36px;
+            height: 36px;
             background: rgba(255, 255, 255, 0.8);
             border: 2px solid #333;
-            border-radius: 5px;
+            border-radius: 6px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 16px;
+            font-size: 20px;
             font-weight: bold;
             color: #333;
             cursor: pointer;
@@ -120,15 +120,15 @@ class VirtualGamepad {
         this.jumpButton = document.createElement('div');
         this.jumpButton.textContent = 'JUMP';
         this.jumpButton.style.cssText = `
-            width: 80px;
-            height: 80px;
+            width: 85px;
+            height: 85px;
             background: rgba(255, 255, 255, 0.8);
             border: 3px solid #333;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 12px;
+            font-size: 13px;
             font-weight: bold;
             color: #333;
             cursor: pointer;
