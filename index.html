@@ -80,10 +80,70 @@
                 grid-template-columns: 1fr;
             }
         }
+        
+        /* Debug Window Styles */
+        #debug-window {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.85);
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            min-width: 300px;
+            max-width: 400px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            border: 2px solid #00ff00;
+        }
+        
+        #debug-window h4 {
+            margin: 0 0 10px 0;
+            color: #00ff00;
+            font-size: 14px;
+            border-bottom: 1px solid #00ff00;
+            padding-bottom: 5px;
+        }
+        
+        #debug-window .debug-line {
+            margin: 5px 0;
+            line-height: 1.4;
+        }
+        
+        #debug-window .debug-label {
+            color: #ffff00;
+            font-weight: bold;
+        }
+        
+        #debug-window .debug-success {
+            color: #00ff00;
+        }
+        
+        #debug-window .debug-warning {
+            color: #ff9900;
+        }
+        
+        #debug-window .debug-error {
+            color: #ff0000;
+        }
+        
+        #debug-window .debug-info {
+            color: #00ccff;
+        }
     </style>
     <title>Test Game 001</title>
 </head>
 <body>
+    <!-- Debug Window -->
+    <div id="debug-window">
+        <h4>🔍 LEVEL DEBUG INFO</h4>
+        <div id="debug-content">
+            <div class="debug-line">Waiting for level generation...</div>
+        </div>
+    </div>
+    
     <div id="root">
         <div style="max-width: 900px; margin: 0 auto; padding: 20px; font-family: 'Lato', sans-serif;">
             <div id="game-container" style="text-align: center;"></div>

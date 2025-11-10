@@ -5,6 +5,49 @@
 let lastUsedPatterns = [];
 let lastGenerationTime = 0;
 
+// Debug display function
+function updateDebugDisplay(info) {
+    try {
+        const debugContent = document.getElementById('debug-content');
+        if (!debugContent) {
+            console.log('Debug window not found, skipping display update');
+            return;
+        }
+        
+        let html = '';
+        html += `<div class="debug-line"><span class="debug-label">Level:</span> <span class="debug-info">${info.level}</span></div>`;
+        html += `<div class="debug-line"><span class="debug-label">Pattern:</span> <span class="debug-success">${info.pattern}</span></div>`;
+    
+    if (info.secondaryPattern) {
+        html += `<div class="debug-line"><span class="debug-label">Hybrid:</span> <span class="debug-success">${info.secondaryPattern}</span></div>`;
+    }
+    
+    html += `<div class="debug-line"><span class="debug-label">Transform:</span> ${info.transformType}</div>`;
+    html += `<div class="debug-line"><span class="debug-label">Shuffle:</span> ${info.shuffleFactor}</div>`;
+    
+    if (info.isFallback) {
+        html += `<div class="debug-line"><span class="debug-error">⚠️ FALLBACK LEVEL</span></div>`;
+        html += `<div class="debug-line"><span class="debug-label">Reason:</span> <span class="debug-warning">Failed ${info.attempts} validation attempts</span></div>`;
+    } else {
+        html += `<div class="debug-line"><span class="debug-success">✓ Completable</span> (attempt ${info.attempts})</div>`;
+    }
+    
+    html += `<div class="debug-line"><span class="debug-label">Platforms:</span> ${info.platformCount}</div>`;
+    html += `<div class="debug-line"><span class="debug-label">Goal:</span> (${info.goalX}, ${info.goalY})</div>`;
+    html += `<div class="debug-line"><span class="debug-label">Start X:</span> ${info.startX}</div>`;
+    
+    if (info.patternReset) {
+        html += `<div class="debug-line"><span class="debug-info">🔄 Pattern tracking reset</span></div>`;
+    }
+    
+    html += `<div class="debug-line"><span class="debug-label">Timestamp:</span> ${info.timestamp}</div>`;
+    
+        debugContent.innerHTML = html;
+    } catch (error) {
+        console.error('Error updating debug display:', error);
+    }
+}
+
 // Reset level generation state (call when starting a new game)
 function resetLevelGeneration() {
     lastUsedPatterns = [];
@@ -17,7 +60,8 @@ function generateLevel(levelNumber) {
     // Reset pattern tracking for Level 1 to ensure variety on page refresh or new game
     // Also reset if it's been more than 2 seconds since last generation (indicates new game)
     const currentTime = Date.now();
-    if (levelNumber === 1 || (currentTime - lastGenerationTime) > 2000) {
+    const patternReset = (levelNumber === 1 || (currentTime - lastGenerationTime) > 2000);
+    if (patternReset) {
         lastUsedPatterns = [];
         console.log('Pattern tracking reset for new game session');
     }
@@ -27,18 +71,52 @@ function generateLevel(levelNumber) {
     const maxAttempts = 10;
     
     while (attempts < maxAttempts) {
+        attempts++;
         const level = generateLevelAttempt(levelNumber);
         
         // Validate if the level is completable
         if (isLevelCompletable(level)) {
+            // Display debug info for successful generation
+            updateDebugDisplay({
+                level: levelNumber,
+                pattern: level.debugInfo.pattern,
+                secondaryPattern: level.debugInfo.secondaryPattern,
+                transformType: level.debugInfo.transformType,
+                shuffleFactor: level.debugInfo.shuffleFactor,
+                isFallback: false,
+                attempts: attempts,
+                platformCount: level.platforms.length,
+                goalX: Math.round(level.goal.x),
+                goalY: Math.round(level.goal.y),
+                startX: Math.round(level.debugInfo.startX),
+                patternReset: patternReset,
+                timestamp: level.debugInfo.timestamp
+            });
             return level;
         }
-        
-        attempts++;
     }
     
     // If we can't generate a valid level after maxAttempts, return a simple fallback level
-    return generateFallbackLevel(levelNumber);
+    const fallbackLevel = generateFallbackLevel(levelNumber);
+    
+    // Display debug info for fallback generation
+    updateDebugDisplay({
+        level: levelNumber,
+        pattern: 'FALLBACK',
+        secondaryPattern: null,
+        transformType: 'None',
+        shuffleFactor: '0.00',
+        isFallback: true,
+        attempts: maxAttempts,
+        platformCount: fallbackLevel.platforms.length,
+        goalX: Math.round(fallbackLevel.goal.x),
+        goalY: Math.round(fallbackLevel.goal.y),
+        startX: 50,
+        patternReset: patternReset,
+        timestamp: Date.now() % 100000
+    });
+    
+    return fallbackLevel;
 }
 
 // Helper function to check if a level is mathematically completable
@@ -350,10 +428,20 @@ function generateLevelAttempt(levelNumber) {
     const timestamp = Date.now() % 100000; // Last 5 digits for uniqueness
     console.log(`[${timestamp}] Level ${levelNumber}: Pattern=${selectedPattern}${secondaryPattern ? '+' + secondaryPattern : ''}, Transform=${transformType}, Shuffle=${shuffleFactor.toFixed(2)}, Platforms=${platforms.length}, GoalPos=(${Math.round(goal.x)},${Math.round(goal.y)}), StartX=${Math.round(currentX)}`);
     
+    const transformNames = ['Vertical Shuffle', 'Horizontal Jitter', 'Size Variation', 'Wave Pattern'];
+    
     return {
         platforms: platforms,
         spawn: spawn,
-        goal: goal
+        goal: goal,
+        debugInfo: {
+            pattern: selectedPattern,
+            secondaryPattern: secondaryPattern,
+            transformType: transformNames[transformType],
+            shuffleFactor: shuffleFactor.toFixed(2),
+            startX: currentX,
+            timestamp: timestamp
+        }
     };
 }
 
