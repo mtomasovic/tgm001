@@ -6,6 +6,7 @@ class VirtualGamepad {
         this.keys = {};
         this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         this.touchStartTime = 0;
+        this.movementMultiplier = 0; // 0 to 1 based on joystick deflection
         this.createGamepad();
     }
     
@@ -45,75 +46,158 @@ class VirtualGamepad {
     }
     
     createDPad() {
-        const dpadContainer = document.createElement('div');
-        dpadContainer.style.cssText = `
+        const joystickContainer = document.createElement('div');
+        joystickContainer.style.cssText = `
             position: relative;
             width: 120px;
             height: 120px;
         `;
         
-        // Create directional buttons with adjusted spacing
-        this.createDPadButton('↑', 42, 0, 'ArrowUp');
-        this.createDPadButton('↓', 42, 84, 'ArrowDown');
-        this.createDPadButton('←', 0, 42, 'ArrowLeft');
-        this.createDPadButton('→', 84, 42, 'ArrowRight');
-        
-        dpadContainer.appendChild(this.upButton);
-        dpadContainer.appendChild(this.downButton);
-        dpadContainer.appendChild(this.leftButton);
-        dpadContainer.appendChild(this.rightButton);
-        
-        this.gamepadDiv.appendChild(dpadContainer);
-    }
-    
-    createDPadButton(symbol, left, top, key) {
-        const button = document.createElement('div');
-        button.textContent = symbol;
-        button.style.cssText = `
+        // Create joystick base (outer circle)
+        this.joystickBase = document.createElement('div');
+        this.joystickBase.style.cssText = `
             position: absolute;
-            left: ${left}px;
-            top: ${top}px;
-            width: 36px;
-            height: 36px;
-            background: rgba(255, 255, 255, 0.8);
-            border: 2px solid #333;
-            border-radius: 6px;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 100px;
+            height: 100px;
+            background: rgba(100, 100, 100, 0.5);
+            border: 3px solid rgba(80, 80, 80, 0.8);
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 20px;
-            font-weight: bold;
-            color: #333;
-            cursor: pointer;
-            touch-action: manipulation;
-            user-select: none;
-            -webkit-user-select: none;
         `;
         
-        // Add touch events
-        button.addEventListener('touchstart', (e) => {
+        // Create joystick stick (inner circle)
+        this.joystickStick = document.createElement('div');
+        this.joystickStick.style.cssText = `
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 3px solid rgba(50, 50, 50, 0.8);
+            border-radius: 50%;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            transition: background 0.1s;
+        `;
+        
+        this.joystickBase.appendChild(this.joystickStick);
+        joystickContainer.appendChild(this.joystickBase);
+        
+        // Joystick state
+        this.joystickActive = false;
+        this.joystickCenterX = 0;
+        this.joystickCenterY = 0;
+        this.joystickMaxDistance = 25; // Maximum distance the stick can move from center
+        
+        // Touch event handlers for joystick
+        const handleJoystickTouch = (e) => {
             e.preventDefault();
-            this.keys[key] = true;
-            button.style.background = 'rgba(100, 150, 255, 0.8)';
+            
+            const rect = this.joystickBase.getBoundingClientRect();
+            this.joystickCenterX = rect.left + rect.width / 2;
+            this.joystickCenterY = rect.top + rect.height / 2;
+            
+            if (e.touches && e.touches.length > 0) {
+                const touch = e.touches[0];
+                this.updateJoystick(touch.clientX, touch.clientY);
+            }
+        };
+        
+        const handleJoystickEnd = (e) => {
+            e.preventDefault();
+            this.resetJoystick();
+        };
+        
+        this.joystickBase.addEventListener('touchstart', (e) => {
+            this.joystickActive = true;
+            this.joystickStick.style.background = 'rgba(100, 150, 255, 0.9)';
+            handleJoystickTouch(e);
         });
         
-        button.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            this.keys[key] = false;
-            button.style.background = 'rgba(255, 255, 255, 0.8)';
+        this.joystickBase.addEventListener('touchmove', (e) => {
+            if (this.joystickActive) {
+                handleJoystickTouch(e);
+            }
         });
         
-        button.addEventListener('touchcancel', (e) => {
-            e.preventDefault();
-            this.keys[key] = false;
-            button.style.background = 'rgba(255, 255, 255, 0.8)';
-        });
+        this.joystickBase.addEventListener('touchend', handleJoystickEnd);
+        this.joystickBase.addEventListener('touchcancel', handleJoystickEnd);
         
-        // Store button reference
-        if (key === 'ArrowUp') this.upButton = button;
-        else if (key === 'ArrowDown') this.downButton = button;
-        else if (key === 'ArrowLeft') this.leftButton = button;
-        else if (key === 'ArrowRight') this.rightButton = button;
+        this.gamepadDiv.appendChild(joystickContainer);
+    }
+    
+    updateJoystick(touchX, touchY) {
+        // Calculate distance from center
+        const deltaX = touchX - this.joystickCenterX;
+        const deltaY = touchY - this.joystickCenterY;
+        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        
+        // Clamp to max distance
+        let stickX = deltaX;
+        let stickY = deltaY;
+        
+        if (distance > this.joystickMaxDistance) {
+            const angle = Math.atan2(deltaY, deltaX);
+            stickX = Math.cos(angle) * this.joystickMaxDistance;
+            stickY = Math.sin(angle) * this.joystickMaxDistance;
+        }
+        
+        // Update stick visual position
+        this.joystickStick.style.transform = `translate(calc(-50% + ${stickX}px), calc(-50% + ${stickY}px))`;
+        
+        // Update key states based on stick position
+        // Use a deadzone to prevent drift
+        const deadzone = 5;
+        
+        // Calculate movement multiplier based on horizontal deflection (0 to 1)
+        // This represents how far the stick is pushed (for progressive speed)
+        const horizontalDistance = Math.abs(stickX);
+        if (horizontalDistance > deadzone) {
+            // Map the distance to a 0-1 range, with smooth acceleration
+            // Minimum speed at deadzone, maximum at max distance
+            const normalizedDistance = (horizontalDistance - deadzone) / (this.joystickMaxDistance - deadzone);
+            // Apply a slight curve for better feel (square root makes initial movement more responsive)
+            this.movementMultiplier = Math.sqrt(Math.min(1, normalizedDistance));
+        } else {
+            this.movementMultiplier = 0;
+        }
+        
+        // Horizontal movement (left/right)
+        if (Math.abs(stickX) > deadzone) {
+            if (stickX < 0) {
+                this.keys['ArrowLeft'] = true;
+                this.keys['ArrowRight'] = false;
+            } else {
+                this.keys['ArrowRight'] = true;
+                this.keys['ArrowLeft'] = false;
+            }
+        } else {
+            this.keys['ArrowLeft'] = false;
+            this.keys['ArrowRight'] = false;
+        }
+        
+        // Note: We don't use vertical movement (up/down) for jump
+        // Jump is only triggered by the jump button
+        this.keys['ArrowUp'] = false;
+        this.keys['ArrowDown'] = false;
+    }
+    
+    resetJoystick() {
+        this.joystickActive = false;
+        this.joystickStick.style.transform = 'translate(-50%, -50%)';
+        this.joystickStick.style.background = 'rgba(255, 255, 255, 0.9)';
+        this.movementMultiplier = 0;
+        
+        // Clear all directional keys
+        this.keys['ArrowLeft'] = false;
+        this.keys['ArrowRight'] = false;
+        this.keys['ArrowUp'] = false;
+        this.keys['ArrowDown'] = false;
     }
     
     createJumpButton() {
@@ -165,6 +249,10 @@ class VirtualGamepad {
     
     getKeys() {
         return this.keys;
+    }
+    
+    getMovementMultiplier() {
+        return this.movementMultiplier;
     }
     
     destroy() {

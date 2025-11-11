@@ -96,13 +96,22 @@ function createP5Game() {
             update() {
                 // Merge keyboard and gamepad inputs
                 const gamepadKeys = gamepad.getKeys();
+                const movementMultiplier = gamepad.getMovementMultiplier();
                 const allKeys = { ...keys, ...gamepadKeys };
                 
                 if (allKeys['ArrowLeft'] || allKeys['a'] || allKeys['A']) {
-                    this.vx = -this.speed;
+                    // Use movement multiplier for progressive joystick control
+                    const speedMultiplier = (allKeys['ArrowLeft'] && !keys['a'] && !keys['A']) 
+                        ? Math.max(0.3, movementMultiplier) // Joystick: min 30% speed, max 100%
+                        : 1; // Keyboard: always 100%
+                    this.vx = -this.speed * speedMultiplier;
                     this.facing = -1;
                 } else if (allKeys['ArrowRight'] || allKeys['d'] || allKeys['D']) {
-                    this.vx = this.speed;
+                    // Use movement multiplier for progressive joystick control
+                    const speedMultiplier = (allKeys['ArrowRight'] && !keys['d'] && !keys['D']) 
+                        ? Math.max(0.3, movementMultiplier) // Joystick: min 30% speed, max 100%
+                        : 1; // Keyboard: always 100%
+                    this.vx = this.speed * speedMultiplier;
                     this.facing = 1;
                 } else {
                     this.vx *= 0.8;

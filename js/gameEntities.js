@@ -20,16 +20,25 @@ class CanvasPlayer {
         this.scaleY = scaleY;
     }
     
-    update(keys, gamepadKeys, platforms, spawn, canvas) {
+    update(keys, gamepadKeys, platforms, spawn, canvas, movementMultiplier = 1) {
         // Merge keyboard and gamepad inputs
         const allKeys = { ...keys, ...gamepadKeys };
         
         // Handle input
         if (allKeys['ArrowLeft'] || allKeys['a'] || allKeys['A'] || allKeys['KeyA']) {
-            this.vx = -this.speed;
+            // Use movement multiplier for progressive joystick control
+            // Keyboard always uses full speed (multiplier = 1)
+            const speedMultiplier = (allKeys['ArrowLeft'] && !keys['a'] && !keys['A'] && !keys['KeyA']) 
+                ? Math.max(0.3, movementMultiplier) // Joystick: min 30% speed, max 100%
+                : 1; // Keyboard: always 100%
+            this.vx = -this.speed * speedMultiplier;
             this.facing = -1;
         } else if (allKeys['ArrowRight'] || allKeys['d'] || allKeys['D'] || allKeys['KeyD']) {
-            this.vx = this.speed;
+            // Use movement multiplier for progressive joystick control
+            const speedMultiplier = (allKeys['ArrowRight'] && !keys['d'] && !keys['D'] && !keys['KeyD']) 
+                ? Math.max(0.3, movementMultiplier) // Joystick: min 30% speed, max 100%
+                : 1; // Keyboard: always 100%
+            this.vx = this.speed * speedMultiplier;
             this.facing = 1;
         } else {
             this.vx *= 0.8; // friction

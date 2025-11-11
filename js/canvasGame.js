@@ -200,7 +200,8 @@ function createCanvasGame() {
         // Update and draw player (only if level not complete)
         if (!game.levelComplete) {
             const gamepadKeys = gamepad.getKeys();
-            const result = game.player.update(game.keys, gamepadKeys, game.platforms, game.spawn, canvas);
+            const movementMultiplier = gamepad.getMovementMultiplier();
+            const result = game.player.update(game.keys, gamepadKeys, game.platforms, game.spawn, canvas, movementMultiplier);
             
             if (result === 'goal') {
                 game.levelComplete = true;
