@@ -449,16 +449,22 @@ function generateLevelAttempt(levelNumber) {
     const goalHeight = Math.max(80, Math.min(500, baseGoalHeight + goalHeightVariation));
     
     // Much more varied goal X position
+    const goalPlatformWidth = 80 + Math.random() * 40; // Width of goal platform
     const baseGoalX = selectedPattern === 'valley' ? 400 + Math.random() * 200 : 600 + Math.random() * 150;
     const goalXVariation = Math.random() * 100 - 50; // ±50 pixels variation
-    const goalX = Math.max(550, Math.min(750, baseGoalX + goalXVariation));
+    
+    // Ensure goal platform stays within playable area (0 to 800)
+    // Account for platform width and some margin
+    const minGoalX = 20; // Left margin
+    const maxGoalX = 800 - goalPlatformWidth - 20; // Right margin (800 is the game width)
+    const goalX = Math.max(minGoalX, Math.min(maxGoalX, baseGoalX + goalXVariation));
     
     const goal = {x: goalX, y: goalHeight};
     
     platforms.push({
         x: goal.x,
         y: goal.y,
-        width: 80 + Math.random() * 40,
+        width: goalPlatformWidth,
         height: 20,
         color: '#FFD700'
     });
