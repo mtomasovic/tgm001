@@ -367,18 +367,50 @@ function createP5Game() {
                     }
                 }
                 
-                // Add visual effects for goal platforms (gold)
+                // Add checkered flag pattern for goal platforms (gold)
                 if (this.color[0] === 255 && this.color[1] === 215 && this.color[2] === 0) {
-                    // Draw shimmering effect
-                    p.fill(255, 255, 0);
-                    const shimmerOffset = Math.sin(Date.now() * 0.01) * 5;
-                    p.rect(this.x + shimmerOffset, this.y - 2, this.width, 2);
+                    const scaleX = p.width / 800;
+                    const scaleY = p.height / 600;
                     
-                    // Draw goal flag or marker
-                    p.fill(255, 102, 0);
-                    p.rect(this.x + this.width - 10, this.y - 20, 8, 15);
-                    p.fill(255, 255, 0);
-                    p.rect(this.x + this.width - 10, this.y - 20, 6, 8);
+                    // Draw checkered pattern on the platform
+                    const checkerSize = 8 * scaleX;
+                    p.noStroke();
+                    for (let x = 0; x < this.width; x += checkerSize) {
+                        for (let y = 0; y < this.height; y += checkerSize) {
+                            const isBlack = ((Math.floor(x / checkerSize) + Math.floor(y / checkerSize)) % 2 === 0);
+                            p.fill(isBlack ? 0 : 255);
+                            p.rect(this.x + x, this.y + y, checkerSize, checkerSize);
+                        }
+                    }
+                    
+                    // Draw checkered flag pole on the right side
+                    const flagPoleX = this.x + this.width - 15 * scaleX;
+                    const flagPoleY = this.y - 35 * scaleY;
+                    const flagWidth = 12 * scaleX;
+                    const flagHeight = 20 * scaleY;
+                    const poleWidth = 2 * scaleX;
+                    
+                    // Flag pole
+                    p.fill(51);
+                    p.rect(flagPoleX, flagPoleY, poleWidth, 35 * scaleY);
+                    
+                    // Checkered flag
+                    const flagCheckerSize = 4 * scaleX;
+                    for (let x = 0; x < flagWidth; x += flagCheckerSize) {
+                        for (let y = 0; y < flagHeight; y += flagCheckerSize) {
+                            const isBlack = ((Math.floor(x / flagCheckerSize) + Math.floor(y / flagCheckerSize)) % 2 === 0);
+                            p.fill(isBlack ? 0 : 255);
+                            p.rect(flagPoleX + poleWidth + x, flagPoleY + y, flagCheckerSize, flagCheckerSize);
+                        }
+                    }
+                    
+                    // Add waving effect to flag
+                    const waveOffset = Math.sin(Date.now() * 0.005) * 2 * scaleX;
+                    p.fill(255, 255, 255, 80);
+                    p.rect(flagPoleX + poleWidth + flagWidth + waveOffset, flagPoleY, 2 * scaleX, flagHeight);
+                    
+                    // Reset stroke for other elements
+                    p.stroke(0);
                 }
             }
         }

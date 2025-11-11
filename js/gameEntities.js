@@ -318,18 +318,43 @@ class CanvasPlatform {
             ctx.shadowBlur = 0; // Reset shadow
         }
         
-        // Add visual effects for goal platforms
+        // Add checkered flag pattern for goal platforms
         if (this.color === '#FFD700') {
-            // Draw shimmering effect
-            ctx.fillStyle = '#FFFF00';
-            const shimmerOffset = Math.sin(Date.now() * 0.01) * 5;
-            ctx.fillRect(this.x + shimmerOffset, this.y - 2, this.width, 2);
+            // Draw checkered pattern on the platform
+            const checkerSize = 8 * scaleX;
+            for (let x = 0; x < this.width; x += checkerSize) {
+                for (let y = 0; y < this.height; y += checkerSize) {
+                    const isBlack = ((Math.floor(x / checkerSize) + Math.floor(y / checkerSize)) % 2 === 0);
+                    ctx.fillStyle = isBlack ? '#000000' : '#FFFFFF';
+                    ctx.fillRect(this.x + x, this.y + y, checkerSize, checkerSize);
+                }
+            }
             
-            // Draw goal flag or marker
-            ctx.fillStyle = '#FF6600';
-            ctx.fillRect(this.x + this.width - 10, this.y - 20, 8, 15);
-            ctx.fillStyle = '#FFFF00';
-            ctx.fillRect(this.x + this.width - 10, this.y - 20, 6, 8);
+            // Draw checkered flag pole on the right side
+            const flagPoleX = this.x + this.width - 15 * scaleX;
+            const flagPoleY = this.y - 35 * scaleY;
+            const flagWidth = 12 * scaleX;
+            const flagHeight = 20 * scaleY;
+            const poleWidth = 2 * scaleX;
+            
+            // Flag pole
+            ctx.fillStyle = '#333333';
+            ctx.fillRect(flagPoleX, flagPoleY, poleWidth, 35 * scaleY);
+            
+            // Checkered flag
+            const flagCheckerSize = 4 * scaleX;
+            for (let x = 0; x < flagWidth; x += flagCheckerSize) {
+                for (let y = 0; y < flagHeight; y += flagCheckerSize) {
+                    const isBlack = ((Math.floor(x / flagCheckerSize) + Math.floor(y / flagCheckerSize)) % 2 === 0);
+                    ctx.fillStyle = isBlack ? '#000000' : '#FFFFFF';
+                    ctx.fillRect(flagPoleX + poleWidth, flagPoleY + y, flagCheckerSize, flagCheckerSize);
+                }
+            }
+            
+            // Add waving effect to flag
+            const waveOffset = Math.sin(Date.now() * 0.005) * 2 * scaleX;
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.fillRect(flagPoleX + poleWidth + flagWidth + waveOffset, flagPoleY, 2 * scaleX, flagHeight);
         }
     }
 }
