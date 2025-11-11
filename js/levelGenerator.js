@@ -415,28 +415,26 @@ function generateLevelAttempt(levelNumber) {
             const segmentX = 200 + Math.random() * 300;
             const segmentWidth = 40 + Math.random() * 40;
             
-            // Don't overlap with existing platforms
-            let overlap = false;
-            for (let platform of platforms) {
-                if (segmentX < platform.x + platform.width && segmentX + segmentWidth > platform.x && 
-                    Math.abs(580 - platform.y) < 30) {
-                    overlap = true;
-                    break;
-                }
-            }
+            const newGroundSegment = {x: segmentX, y: 580, width: segmentWidth, height: 20, color: '#8B4513'};
             
-            if (!overlap) {
-                platforms.push({x: segmentX, y: 580, width: segmentWidth, height: 20, color: '#8B4513'});
+            // Use collision detection helper to check for overlaps
+            if (isValidPlatformPosition(newGroundSegment, platforms, 20)) {
+                platforms.push(newGroundSegment);
                 
                 // Reduced death trap chance on ground segments
                 if (levelNumber > 4 && Math.random() < deathTrapChance * 0.3) {
-                    platforms.push({
+                    const deathTrap = {
                         x: segmentX + segmentWidth/2 - 8,
                         y: 560,
                         width: 16,
                         height: 20,
                         color: '#FF0000'
-                    });
+                    };
+                    
+                    // Only add death trap if it doesn't overlap with other platforms
+                    if (isValidPlatformPosition(deathTrap, platforms, 10)) {
+                        platforms.push(deathTrap);
+                    }
                 }
             }
         }
@@ -457,17 +455,48 @@ function generateLevelAttempt(levelNumber) {
     // Account for platform width and some margin
     const minGoalX = 20; // Left margin
     const maxGoalX = 800 - goalPlatformWidth - 20; // Right margin (800 is the game width)
-    const goalX = Math.max(minGoalX, Math.min(maxGoalX, baseGoalX + goalXVariation));
+    let goalX = Math.max(minGoalX, Math.min(maxGoalX, baseGoalX + goalXVariation));
+    let goalY = goalHeight;
     
-    const goal = {x: goalX, y: goalHeight};
-    
-    platforms.push({
-        x: goal.x,
-        y: goal.y,
+    // Try to find a non-overlapping position for the goal platform
+    let goalPlatform = {
+        x: goalX,
+        y: goalY,
         width: goalPlatformWidth,
         height: 20,
         color: '#FFD700'
-    });
+    };
+    
+    // If goal overlaps, try to adjust it
+    let goalAttempts = 0;
+    const maxGoalAttempts = 10;
+    while (goalAttempts < maxGoalAttempts && !isValidPlatformPosition(goalPlatform, platforms, 25)) {
+        // Try different positions
+        if (goalAttempts < 3) {
+            goalX += 60; // Try moving right
+        } else if (goalAttempts < 6) {
+            goalX = baseGoalX - (goalAttempts - 2) * 50; // Try moving left
+        } else {
+            goalY -= 60; // Try moving up
+        }
+        
+        // Keep within bounds
+        goalX = Math.max(minGoalX, Math.min(maxGoalX, goalX));
+        goalY = Math.max(80, Math.min(500, goalY));
+        
+        goalPlatform = {
+            x: goalX,
+            y: goalY,
+            width: goalPlatformWidth,
+            height: 20,
+            color: '#FFD700'
+        };
+        
+        goalAttempts++;
+    }
+    
+    const goal = {x: goalX, y: goalY};
+    platforms.push(goalPlatform);
     
     // Log level generation info for debugging - ENHANCED LOGGING
     const timestamp = Date.now() % 100000; // Last 5 digits for uniqueness
@@ -525,6 +554,104 @@ function generateFallbackLevel(levelNumber) {
     };
 }
 
+// Helper function to check if two platforms overlap or are too close
+function platformsOverlap(p1, p2, minSpacing = 10) {
+    // Add minimum spacing buffer to prevent platforms from being too close
+    const p1Left = p1.x - minSpacing;
+    const p1Right = p1.x + p1.width + minSpacing;
+    const p1Top = p1.y - minSpacing;
+    const p1Bottom = p1.y + p1.height + minSpacing;
+    
+    const p2Left = p2.x;
+    const p2Right = p2.x + p2.width;
+    const p2Top = p2.y;
+    const p2Bottom = p2.y + p2.height;
+    
+    // Check if rectangles overlap
+    return !(p1Right < p2Left || 
+             p1Left > p2Right || 
+             p1Bottom < p2Top || 
+             p1Top > p2Bottom);
+}
+
+// Helper function to check if a platform is valid (doesn't overlap with existing platforms)
+function isValidPlatformPosition(newPlatform, existingPlatforms, minSpacing = 10) {
+    // Skip spawn platform (brown) and goal platform (gold) from strict overlap checking
+    // but still maintain minimum spacing from them
+    for (let platform of existingPlatforms) {
+        if (platformsOverlap(newPlatform, platform, minSpacing)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// Helper function to adjust platform position to avoid overlaps
+function adjustPlatformPosition(platform, existingPlatforms, maxAttempts = 5) {
+    let attempts = 0;
+    let adjustedPlatform = {...platform};
+    
+    while (attempts < maxAttempts) {
+        if (isValidPlatformPosition(adjustedPlatform, existingPlatforms, 10)) {
+            return adjustedPlatform;
+        }
+        
+        // Try different adjustments
+        switch (attempts) {
+            case 0: // Try moving right
+                adjustedPlatform.x += 30;
+                break;
+            case 1: // Try moving left
+                adjustedPlatform.x = platform.x - 30;
+                break;
+            case 2: // Try moving up
+                adjustedPlatform.x = platform.x;
+                adjustedPlatform.y -= 40;
+                break;
+            case 3: // Try moving down
+                adjustedPlatform.y = platform.y + 40;
+                break;
+            case 4: // Try diagonal
+                adjustedPlatform.x = platform.x + 40;
+                adjustedPlatform.y = platform.y - 30;
+                break;
+        }
+        
+        // Keep within bounds
+        adjustedPlatform.x = Math.max(20, Math.min(750, adjustedPlatform.x));
+        adjustedPlatform.y = Math.max(100, Math.min(560, adjustedPlatform.y));
+        
+        attempts++;
+    }
+    
+    // If we can't find a valid position, return null to skip this platform
+    return null;
+}
+
+// Helper function to add a platform with collision checking
+function addPlatformSafely(platforms, newPlatform, allowAdjustment = true) {
+    // Check if platform is within bounds
+    if (newPlatform.x < 10 || newPlatform.x + newPlatform.width > 790 ||
+        newPlatform.y < 80 || newPlatform.y > 580) {
+        return false; // Out of bounds
+    }
+    
+    // Check for overlaps with 10px minimum spacing
+    if (isValidPlatformPosition(newPlatform, platforms, 10)) {
+        platforms.push(newPlatform);
+        return true;
+    } else if (allowAdjustment) {
+        // Try to adjust position
+        const adjusted = adjustPlatformPosition(newPlatform, platforms);
+        if (adjusted) {
+            platforms.push(adjusted);
+            return true;
+        }
+    }
+    
+    return false; // Could not add platform
+}
+
 // Apply random transformations to create unique level variations
 function applyLevelTransformations(platforms, transformType, shuffleFactor, levelNumber) {
     // Don't transform spawn platform or goal platform
@@ -535,12 +662,25 @@ function applyLevelTransformations(platforms, transformType, shuffleFactor, leve
     // Ensure minimum shuffle strength for visible differences
     const effectiveShuffleFactor = Math.max(shuffleFactor, 0.4);
     
+    // Store original positions for collision checking
+    const originalPositions = new Map();
+    nonSpecialPlatforms.forEach(p => {
+        originalPositions.set(p, {x: p.x, y: p.y, width: p.width});
+    });
+    
     switch (transformType) {
         case 0: // Vertical shuffle - shift platforms up/down randomly
             for (let platform of nonSpecialPlatforms) {
                 if (Math.random() < effectiveShuffleFactor * 0.8 && platform.color !== '#FF0000') {
-                    const shift = (Math.random() - 0.5) * 80; // Increased from 60 to 80
+                    const originalY = platform.y;
+                    const shift = (Math.random() - 0.5) * 80;
                     platform.y = Math.max(100, Math.min(560, platform.y + shift));
+                    
+                    // Check if new position causes overlap
+                    const otherPlatforms = platforms.filter(p => p !== platform);
+                    if (!isValidPlatformPosition(platform, otherPlatforms, 10)) {
+                        platform.y = originalY; // Revert if overlap
+                    }
                 }
             }
             break;
@@ -548,8 +688,15 @@ function applyLevelTransformations(platforms, transformType, shuffleFactor, leve
         case 1: // Horizontal jitter - slight x position changes
             for (let platform of nonSpecialPlatforms) {
                 if (Math.random() < effectiveShuffleFactor) {
-                    const jitter = (Math.random() - 0.5) * 60; // Increased from 40 to 60
+                    const originalX = platform.x;
+                    const jitter = (Math.random() - 0.5) * 60;
                     platform.x = Math.max(50, Math.min(700, platform.x + jitter));
+                    
+                    // Check if new position causes overlap
+                    const otherPlatforms = platforms.filter(p => p !== platform);
+                    if (!isValidPlatformPosition(platform, otherPlatforms, 10)) {
+                        platform.x = originalX; // Revert if overlap
+                    }
                 }
             }
             break;
@@ -557,21 +704,35 @@ function applyLevelTransformations(platforms, transformType, shuffleFactor, leve
         case 2: // Size variation - randomize platform widths
             for (let platform of nonSpecialPlatforms) {
                 if (Math.random() < effectiveShuffleFactor && platform.color !== '#FF0000') {
-                    const sizeChange = (Math.random() - 0.5) * 50; // Increased from 40 to 50
+                    const originalWidth = platform.width;
+                    const sizeChange = (Math.random() - 0.5) * 50;
                     platform.width = Math.max(35, Math.min(130, platform.width + sizeChange));
+                    
+                    // Check if new size causes overlap
+                    const otherPlatforms = platforms.filter(p => p !== platform);
+                    if (!isValidPlatformPosition(platform, otherPlatforms, 10)) {
+                        platform.width = originalWidth; // Revert if overlap
+                    }
                 }
             }
             break;
             
         case 3: // Rotation simulation - create slanted patterns
             // Group platforms and shift them in waves
-            const waveFrequency = 0.15 + Math.random() * 0.15; // More visible waves
-            const waveAmplitude = 50 * effectiveShuffleFactor; // Increased amplitude
+            const waveFrequency = 0.15 + Math.random() * 0.15;
+            const waveAmplitude = 50 * effectiveShuffleFactor;
             for (let i = 0; i < nonSpecialPlatforms.length; i++) {
                 const platform = nonSpecialPlatforms[i];
                 if (platform.color !== '#FF0000') {
+                    const originalY = platform.y;
                     const wave = Math.sin(i * waveFrequency) * waveAmplitude;
                     platform.y = Math.max(100, Math.min(560, platform.y + wave));
+                    
+                    // Check if new position causes overlap
+                    const otherPlatforms = platforms.filter(p => p !== platform);
+                    if (!isValidPlatformPosition(platform, otherPlatforms, 10)) {
+                        platform.y = originalY; // Revert if overlap
+                    }
                 }
             }
             break;
@@ -581,11 +742,22 @@ function applyLevelTransformations(platforms, transformType, shuffleFactor, leve
     if (levelNumber > 1) {
         for (let platform of nonSpecialPlatforms) {
             if (Math.random() < 0.3 && platform.color !== '#FF0000') {
-                // Increased micro-adjustments
+                const originalX = platform.x;
+                const originalY = platform.y;
+                
+                // Apply micro-adjustments
                 platform.x += (Math.random() - 0.5) * 20;
                 platform.y += (Math.random() - 0.5) * 20;
                 platform.x = Math.max(50, Math.min(700, platform.x));
                 platform.y = Math.max(100, Math.min(560, platform.y));
+                
+                // Check if new position causes overlap
+                const otherPlatforms = platforms.filter(p => p !== platform);
+                if (!isValidPlatformPosition(platform, otherPlatforms, 10)) {
+                    // Revert if overlap
+                    platform.x = originalX;
+                    platform.y = originalY;
+                }
             }
         }
     }

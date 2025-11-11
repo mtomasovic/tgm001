@@ -44,13 +44,20 @@ function generateLinearPath(config) {
         const widthVar = platformSizeVariation * (0.5 + shuffleFactor * 0.5);
         const platformWidth = minPlatformSize + Math.random() * widthVar;
         
-        platforms.push({
+        const newPlatform = {
             x: currentX,
             y: currentY,
             width: platformWidth,
             height: 20,
             color: '#009600'
-        });
+        };
+        
+        // Use safe platform addition with collision checking
+        if (!addPlatformSafely(platforms, newPlatform, true)) {
+            // If we couldn't add this platform, try to continue with adjusted position
+            currentX += 40; // Skip ahead a bit more
+            continue;
+        }
         
         // Add death traps with varied placement
         if (levelNumber > 1 && Math.random() < deathTrapChance * 0.4) {
@@ -68,13 +75,16 @@ function generateLinearPath(config) {
                 trapY = currentY + 25;
             }
             
-            platforms.push({
+            const deathTrap = {
                 x: trapX,
                 y: trapY,
                 width: 15 + Math.random() * 10,
                 height: 20,
                 color: '#FF0000'
-            });
+            };
+            
+            // Only add death trap if it doesn't overlap (no adjustment for traps)
+            addPlatformSafely(platforms, deathTrap, false);
         }
     }
 }
@@ -114,13 +124,19 @@ function generateZigzagPath(config) {
         
         const platformWidth = minPlatformSize + Math.random() * platformSizeVariation;
         
-        platforms.push({
+        const newPlatform = {
             x: currentX,
             y: currentY,
             width: platformWidth,
             height: 20,
             color: '#009600'
-        });
+        };
+        
+        // Use safe platform addition with collision checking
+        if (!addPlatformSafely(platforms, newPlatform, true)) {
+            currentX += 40;
+            continue;
+        }
         
         // More varied death trap placement in zigzag
         if (levelNumber > 2 && Math.random() < deathTrapChance * 0.6) {
@@ -310,13 +326,16 @@ function generateScatteredPath(config) {
         const finalWidth = levelNumber > 5 && Math.random() < 0.3 ? 
             Math.max(30, platformWidth * 0.6) : platformWidth;
         
-        platforms.push({
+        const newPlatform = {
             x: pos.x,
             y: pos.y,
             width: finalWidth,
             height: 20,
             color: '#009600'
-        });
+        };
+        
+        // Use safe platform addition with collision checking
+        addPlatformSafely(platforms, newPlatform, true);
         
         // Add connecting platforms if gap is too large
         if (i > 0) {
@@ -329,13 +348,16 @@ function generateScatteredPath(config) {
                 const midX = (pos.x + prevPos.x) / 2 + (Math.random() - 0.5) * 40;
                 const midY = (pos.y + prevPos.y) / 2 + (Math.random() - 0.5) * 40;
                 
-                platforms.push({
+                const bridgePlatform = {
                     x: midX,
                     y: midY,
                     width: 40 + Math.random() * 30,
                     height: 20,
                     color: '#009600'
-                });
+                };
+                
+                // Only add if it doesn't overlap
+                addPlatformSafely(platforms, bridgePlatform, true);
             }
         }
         

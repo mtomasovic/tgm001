@@ -57,23 +57,30 @@ function createUpperRoute(platforms, existingPlatforms, levelNumber, minPlatform
         
         const platformWidth = Math.max(50, minPlatformSize * 0.8);
         
-        platforms.push({
+        const newPlatform = {
             x: altX,
             y: altY,
             width: platformWidth,
             height: 20,
             color: '#009600'
-        });
+        };
+        
+        // Use safe platform addition with collision checking
+        if (!addPlatformSafely(platforms, newPlatform, true)) {
+            altX += 40; // Skip ahead if collision
+            continue;
+        }
         
         // Upper routes have strategic death traps but also rewards
         if (levelNumber > 3 && Math.random() < deathTrapChance * 0.3) {
-            platforms.push({
+            const deathTrap = {
                 x: altX + platformWidth + 8,
                 y: altY + 25,
                 width: 12,
                 height: 20,
                 color: '#FF0000'
-            });
+            };
+            addPlatformSafely(platforms, deathTrap, false);
         }
         
         // Add bonus platforms occasionally
