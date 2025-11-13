@@ -367,3 +367,292 @@ class CanvasPlatform {
         }
     }
 }
+
+// Evil Stick Devil Class for Canvas
+class CanvasEvilDevil {
+    constructor(x, y, scaleX, scaleY) {
+        this.spawnX = x;
+        this.spawnY = y - 300 * scaleY; // Start high in the sky
+        this.targetX = x;
+        this.targetY = y - 50 * scaleY; // Float above the platform
+        this.x = this.spawnX;
+        this.y = this.spawnY;
+        this.vx = 0;
+        this.vy = 0;
+        this.width = 20 * scaleX;
+        this.height = 40 * scaleY;
+        this.speed = 0; // Will be set to 90% of player speed
+        this.jumpPower = 12 * scaleY;
+        this.onGround = false;
+        this.facing = 1;
+        this.scaleX = scaleX;
+        this.scaleY = scaleY;
+        this.state = 'flying-in'; // 'flying-in', 'waiting', 'chasing'
+        this.playerHasMoved = false;
+        this.hasLanded = false;
+        this.animationFrame = 0;
+        this.jumpsRemaining = 2;
+        this.lastJumpTime = 0;
+    }
+    
+    update(player, platforms, spawn, canvas) {
+        this.animationFrame++;
+        
+        if (this.state === 'flying-in') {
+            // Fly down to the target platform
+            const dx = this.targetX - this.x;
+            const dy = this.targetY - this.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < 5) {
+                // Reached target position
+                this.state = 'waiting';
+                this.hasLanded = true;
+                this.x = this.targetX;
+                this.y = this.targetY;
+            } else {
+                // Move towards target with smooth easing
+                const speed = 3 * this.scaleX;
+                this.x += (dx / distance) * speed;
+                this.y += (dy / distance) * speed;
+                
+                // Face the direction of movement
+                if (dx > 0) this.facing = 1;
+                else if (dx < 0) this.facing = -1;
+            }
+            return null;
+        }
+        
+        if (this.state === 'waiting') {
+            // Check if player has moved
+            const playerMoved = Math.abs(player.vx) > 0.1 || Math.abs(player.vy) > 0.1;
+            if (playerMoved && !this.playerHasMoved) {
+                this.playerHasMoved = true;
+                this.state = 'chasing';
+                this.speed = player.speed * 0.6; // 60% of player speed
+            }
+            
+            // Bob up and down while waiting
+            this.y = this.targetY + Math.sin(this.animationFrame * 0.05) * 3 * this.scaleY;
+            return null;
+        }
+        
+        if (this.state === 'chasing') {
+            // Chase the player
+            const dx = player.x - this.x;
+            const dy = player.y - this.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // Move horizontally towards player
+            if (Math.abs(dx) > 5) {
+                this.vx = (dx > 0 ? 1 : -1) * this.speed;
+                this.facing = dx > 0 ? 1 : -1;
+            } else {
+                this.vx *= 0.8; // Friction
+            }
+            
+            // Jump if player is above and devil is on ground
+            if (dy < -50 && this.onGround && Date.now() - this.lastJumpTime > 500) {
+                this.vy = -this.jumpPower;
+                this.onGround = false;
+                this.lastJumpTime = Date.now();
+            }
+            
+            // Apply gravity
+            this.vy += 0.5 * this.scaleY;
+            
+            // Update position
+            this.x += this.vx;
+            this.y += this.vy;
+            
+            // Check collisions with platforms
+            this.onGround = false;
+            for (let platform of platforms) {
+                if (this.x < platform.x + platform.width &&
+                    this.x + this.width > platform.x &&
+                    this.y < platform.y + platform.height &&
+                    this.y + this.height > platform.y) {
+                    
+                    const devilBottom = this.y + this.height;
+                    const devilTop = this.y;
+                    const platformTop = platform.y;
+                    const platformBottom = platform.y + platform.height;
+                    
+                    // Landing on top
+                    if (this.vy > 0 && devilBottom > platformTop && devilTop < platformTop) {
+                        this.y = platformTop - this.height;
+                        this.vy = 0;
+                        this.onGround = true;
+                        this.jumpsRemaining = 2;
+                    }
+                    // Hitting from below
+                    else if (this.vy < 0 && devilTop < platformBottom && devilBottom > platformBottom) {
+                        this.y = platformBottom;
+                        this.vy = 0;
+                    }
+                }
+            }
+            
+            // Keep devil in bounds
+            if (this.x < 0) this.x = 0;
+            if (this.x > canvas.width - this.width) this.x = canvas.width - this.width;
+            
+            // Respawn if fell off screen
+            if (this.y > canvas.height) {
+                this.respawn();
+            }
+            
+            // Check collision with player (but not when player is on goal platform)
+            if (this.checkCollisionWithPlayer(player, platforms)) {
+                return 'caught';
+            }
+        }
+        
+        return null;
+    }
+    
+    checkCollisionWithPlayer(player, platforms) {
+        // Check if player is on the goal platform (safe zone)
+        const goalPlatform = platforms.find(p => p.color === '#FFD700');
+        
+        if (goalPlatform) {
+            // Check if player is standing on goal platform
+            const playerOnGoal = player.x < goalPlatform.x + goalPlatform.width &&
+                                player.x + player.width > goalPlatform.x &&
+                                player.y + player.height >= goalPlatform.y &&
+                                player.y + player.height <= goalPlatform.y + 10;
+            
+            // If player is on goal platform, they're safe
+            if (playerOnGoal) {
+                return false;
+            }
+        }
+        
+        // Simple bounding box collision
+        return this.x < player.x + player.width &&
+               this.x + this.width > player.x &&
+               this.y < player.y + player.height &&
+               this.y + this.height > player.y;
+    }
+    
+    respawn() {
+        this.x = this.targetX;
+        this.y = this.targetY;
+        this.vx = 0;
+        this.vy = 0;
+        this.state = 'waiting';
+    }
+    
+    reset() {
+        this.x = this.spawnX;
+        this.y = this.spawnY;
+        this.vx = 0;
+        this.vy = 0;
+        this.state = 'flying-in';
+        this.playerHasMoved = false;
+        this.hasLanded = false;
+        this.animationFrame = 0;
+    }
+    
+    draw(ctx, frameCount) {
+        ctx.save();
+        ctx.translate(this.x + this.width/2, this.y);
+        ctx.scale(this.facing, 1);
+        
+        // Draw evil stick devil
+        ctx.strokeStyle = '#8B0000'; // Dark red
+        ctx.lineWidth = 3 * this.scaleX;
+        ctx.lineCap = 'round';
+        
+        // Head (red)
+        ctx.fillStyle = '#FF0000';
+        ctx.beginPath();
+        ctx.arc(0, 10 * this.scaleY, 8 * this.scaleX, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        
+        // Draw horns
+        ctx.strokeStyle = '#8B0000';
+        ctx.lineWidth = 2 * this.scaleX;
+        ctx.beginPath();
+        ctx.moveTo(-6 * this.scaleX, 4 * this.scaleY);
+        ctx.lineTo(-9 * this.scaleX, 0);
+        ctx.moveTo(6 * this.scaleX, 4 * this.scaleY);
+        ctx.lineTo(9 * this.scaleX, 0);
+        ctx.stroke();
+        
+        // Body
+        ctx.strokeStyle = '#8B0000';
+        ctx.lineWidth = 3 * this.scaleX;
+        ctx.beginPath();
+        ctx.moveTo(0, 18 * this.scaleY);
+        ctx.lineTo(0, 30 * this.scaleY);
+        ctx.stroke();
+        
+        // Arms (animated)
+        let armSwing = Math.sin(frameCount * 0.3) * 0.3;
+        ctx.beginPath();
+        if (this.state === 'chasing' && Math.abs(this.vx) > 0.1) {
+            ctx.moveTo(0, 22 * this.scaleY);
+            ctx.lineTo((-8 + armSwing * 8) * this.scaleX, 28 * this.scaleY);
+            ctx.moveTo(0, 22 * this.scaleY);
+            ctx.lineTo((8 - armSwing * 8) * this.scaleX, 28 * this.scaleY);
+        } else {
+            // Reaching arms while waiting/flying
+            ctx.moveTo(0, 22 * this.scaleY);
+            ctx.lineTo(-8 * this.scaleX, 24 * this.scaleY);
+            ctx.moveTo(0, 22 * this.scaleY);
+            ctx.lineTo(8 * this.scaleX, 24 * this.scaleY);
+        }
+        ctx.stroke();
+        
+        // Legs (animated)
+        let legSwing = Math.sin(frameCount * 0.4) * 0.4;
+        ctx.beginPath();
+        if (this.state === 'chasing' && Math.abs(this.vx) > 0.1 && this.onGround) {
+            ctx.moveTo(0, 30 * this.scaleY);
+            ctx.lineTo((-6 + legSwing * 6) * this.scaleX, 40 * this.scaleY);
+            ctx.moveTo(0, 30 * this.scaleY);
+            ctx.lineTo((6 - legSwing * 6) * this.scaleX, 40 * this.scaleY);
+        } else {
+            ctx.moveTo(0, 30 * this.scaleY);
+            ctx.lineTo(-4 * this.scaleX, 40 * this.scaleY);
+            ctx.moveTo(0, 30 * this.scaleY);
+            ctx.lineTo(4 * this.scaleX, 40 * this.scaleY);
+        }
+        ctx.stroke();
+        
+        // Evil eyes
+        ctx.fillStyle = '#FFFF00'; // Yellow eyes
+        ctx.beginPath();
+        ctx.arc(-3 * this.scaleX, 8 * this.scaleY, 2 * this.scaleX, 0, Math.PI * 2);
+        ctx.arc(3 * this.scaleX, 8 * this.scaleY, 2 * this.scaleX, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Evil pupils
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.arc(-3 * this.scaleX, 8 * this.scaleY, 1 * this.scaleX, 0, Math.PI * 2);
+        ctx.arc(3 * this.scaleX, 8 * this.scaleY, 1 * this.scaleX, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Draw pitchfork tail
+        ctx.strokeStyle = '#8B0000';
+        ctx.lineWidth = 2 * this.scaleX;
+        ctx.beginPath();
+        ctx.moveTo(0, 30 * this.scaleY);
+        const tailWiggle = Math.sin(frameCount * 0.2) * 3 * this.scaleX;
+        ctx.lineTo(tailWiggle - 5 * this.scaleX, 35 * this.scaleY);
+        ctx.lineTo(tailWiggle - 8 * this.scaleX, 38 * this.scaleY);
+        ctx.stroke();
+        
+        // Draw arrow tip on tail
+        ctx.beginPath();
+        ctx.moveTo(tailWiggle - 10 * this.scaleX, 36 * this.scaleY);
+        ctx.lineTo(tailWiggle - 8 * this.scaleX, 38 * this.scaleY);
+        ctx.lineTo(tailWiggle - 6 * this.scaleX, 36 * this.scaleY);
+        ctx.stroke();
+        
+        ctx.restore();
+    }
+}

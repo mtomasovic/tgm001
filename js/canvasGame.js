@@ -65,7 +65,8 @@ function createCanvasGame() {
         keys: {},
         frameCount: 0,
         scaleX: scaleX,
-        scaleY: scaleY
+        scaleY: scaleY,
+        evilDevil: null // Evil devil enemy
     };
     
     // Create player
@@ -107,6 +108,28 @@ function createCanvasGame() {
         game.player.respawn(game.spawn);
         game.levelComplete = false;
         game.showLevelComplete = false;
+        
+        // Spawn evil devil on level 2 and above
+        game.evilDevil = null;
+        if (levelNumber >= 2) {
+            // Calculate spawn probability: 50% at level 2, increasing by 10% per level, capped at 100%
+            const spawnProbability = Math.min(1.0, 0.5 + (levelNumber - 2) * 0.1);
+            
+            if (Math.random() < spawnProbability) {
+                // Find the goal platform (finish line with checkered flag)
+                const goalPlatform = game.platforms.find(p => p.color === '#FFD700');
+                
+                if (goalPlatform) {
+                    game.evilDevil = new CanvasEvilDevil(
+                        goalPlatform.x + goalPlatform.width / 2,
+                        goalPlatform.y,
+                        scaleX,
+                        scaleY
+                    );
+                    console.log(`Evil devil spawned on goal platform at level ${levelNumber} (probability: ${(spawnProbability * 100).toFixed(0)}%)`);
+                }
+            }
+        }
     }
     
     // Initialize first level
@@ -209,8 +232,24 @@ function createCanvasGame() {
             }
             
             updateMovingPlatforms();
+            
+            // Update and draw evil devil if it exists
+            if (game.evilDevil) {
+                const devilResult = game.evilDevil.update(game.player, game.platforms, game.spawn, canvas);
+                if (devilResult === 'caught') {
+                    // Player caught by devil - respawn both
+                    game.player.respawn(game.spawn);
+                    game.evilDevil.reset();
+                    console.log('Player caught by evil devil! Both respawning...');
+                }
+            }
         }
         game.player.draw(ctx, game.frameCount);
+        
+        // Draw evil devil after player
+        if (game.evilDevil) {
+            game.evilDevil.draw(ctx, game.frameCount);
+        }
         
         // Draw level completion message and button
         if (game.showLevelComplete) {

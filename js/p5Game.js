@@ -19,6 +19,7 @@ function createP5Game() {
         let showLevelComplete = false;
         let goal = {x: 0, y: 0, width: 0, height: 0}; // Current level goal
         let spawn = {x: 0, y: 0}; // Current level spawn point
+        let evilDevil = null; // Evil devil enemy
         
         // Load level function for p5.js
         function loadLevel(levelNumber) {
@@ -73,6 +74,30 @@ function createP5Game() {
             player.lastJumpKey = false;
             levelComplete = false;
             showLevelComplete = false;
+            
+            // Spawn evil devil on level 2 and above
+            evilDevil = null;
+            if (levelNumber >= 2) {
+                // Calculate spawn probability: 50% at level 2, increasing by 10% per level, capped at 100%
+                const spawnProbability = Math.min(1.0, 0.5 + (levelNumber - 2) * 0.1);
+                
+                if (Math.random() < spawnProbability) {
+                    // Find the goal platform (finish line with checkered flag)
+                    const goalPlatform = platforms.find(platform => 
+                        platform.color[0] === 255 && platform.color[1] === 215 && platform.color[2] === 0
+                    );
+                    
+                    if (goalPlatform) {
+                        evilDevil = new P5EvilDevil(
+                            goalPlatform.x + goalPlatform.width / 2,
+                            goalPlatform.y,
+                            scaleX,
+                            scaleY
+                        );
+                        console.log(`Evil devil spawned on goal platform at level ${levelNumber} (probability: ${(spawnProbability * 100).toFixed(0)}%)`);
+                    }
+                }
+            }
         }
         
         class P5Player {
@@ -424,6 +449,333 @@ function createP5Game() {
             }
         }
         
+        class P5EvilDevil {
+            constructor(x, y, scaleX, scaleY) {
+                this.spawnX = x;
+                this.spawnY = y - 300 * scaleY; // Start high in the sky
+                this.targetX = x;
+                this.targetY = y - 50 * scaleY; // Float above the platform
+                this.x = this.spawnX;
+                this.y = this.spawnY;
+                this.vx = 0;
+                this.vy = 0;
+                this.width = 20 * scaleX;
+                this.height = 40 * scaleY;
+                this.speed = 0; // Will be set to 90% of player speed
+                this.jumpPower = 12 * scaleY;
+                this.onGround = false;
+                this.facing = 1;
+                this.scaleX = scaleX;
+                this.scaleY = scaleY;
+                this.state = 'flying-in'; // 'flying-in', 'waiting', 'chasing'
+                this.playerHasMoved = false;
+                this.hasLanded = false;
+                this.animationFrame = 0;
+                this.jumpsRemaining = 2;
+                this.lastJumpTime = 0;
+            }
+            
+            update(player, platforms, spawn) {
+                this.animationFrame++;
+                
+                if (this.state === 'flying-in') {
+                    // Fly down to the target platform
+                    const dx = this.targetX - this.x;
+                    const dy = this.targetY - this.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < 5) {
+                        // Reached target position
+                        this.state = 'waiting';
+                        this.hasLanded = true;
+                        this.x = this.targetX;
+                        this.y = this.targetY;
+                    } else {
+                        // Move towards target with smooth easing
+                        const speed = 3 * this.scaleX;
+                        this.x += (dx / distance) * speed;
+                        this.y += (dy / distance) * speed;
+                        
+                        // Face the direction of movement
+                        if (dx > 0) this.facing = 1;
+                        else if (dx < 0) this.facing = -1;
+                    }
+                    return null;
+                }
+                
+                if (this.state === 'waiting') {
+                    // Check if player has moved
+                    const playerMoved = Math.abs(player.vx) > 0.1 || Math.abs(player.vy) > 0.1;
+                    if (playerMoved && !this.playerHasMoved) {
+                        this.playerHasMoved = true;
+                        this.state = 'chasing';
+                        this.speed = player.speed * 0.6; // 60% of player speed
+                    }
+                    
+                    // Bob up and down while waiting
+                    this.y = this.targetY + Math.sin(this.animationFrame * 0.05) * 3 * this.scaleY;
+                    return null;
+                }
+                
+                if (this.state === 'chasing') {
+                    // Chase the player
+                    const dx = player.x - this.x;
+                    const dy = player.y - this.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    // Check if devil is about to fall off current platform
+                    let canMoveInDirection = true;
+                    if (this.onGround) {
+                        const moveDirection = dx > 0 ? 1 : -1;
+                        const checkX = moveDirection > 0 ? this.x + this.width + 5 : this.x - 5;
+                        const checkY = this.y + this.height + 10; // Check below the edge
+                        
+                        // Check if there's ground ahead
+                        let hasGroundAhead = false;
+                        for (let platform of platforms) {
+                            if (checkX >= platform.x && checkX <= platform.x + platform.width &&
+                                checkY >= platform.y && checkY <= platform.y + platform.height + 20) {
+                                hasGroundAhead = true;
+                                break;
+                            }
+                        }
+                        
+                        // If no ground ahead, check if there's a platform to jump to
+                        if (!hasGroundAhead) {
+                            let canJumpToNext = false;
+                            for (let platform of platforms) {
+                                const platformCenterX = platform.x + platform.width / 2;
+                                const platformDistance = Math.abs(platformCenterX - this.x);
+                                const platformHeightDiff = this.y - platform.y;
+                                
+                                // Check if platform is in jumping range
+                                if (platformDistance < 150 * this.scaleX && 
+                                    platformHeightDiff < 120 * this.scaleY && 
+                                    platformHeightDiff > -50 * this.scaleY) {
+                                    canJumpToNext = true;
+                                    // Jump towards the platform
+                                    if (Date.now() - this.lastJumpTime > 500) {
+                                        this.vy = -this.jumpPower;
+                                        this.onGround = false;
+                                        this.lastJumpTime = Date.now();
+                                    }
+                                    break;
+                                }
+                            }
+                            
+                            // If can't jump to next platform, don't move in that direction
+                            if (!canJumpToNext) {
+                                canMoveInDirection = false;
+                            }
+                        }
+                    }
+                    
+                    // Move horizontally towards player only if safe
+                    if (Math.abs(dx) > 5 && canMoveInDirection) {
+                        this.vx = (dx > 0 ? 1 : -1) * this.speed;
+                        this.facing = dx > 0 ? 1 : -1;
+                    } else {
+                        this.vx *= 0.8; // Friction
+                    }
+                    
+                    // Jump if player is above and devil is on ground
+                    if (dy < -50 && this.onGround && Date.now() - this.lastJumpTime > 500) {
+                        this.vy = -this.jumpPower;
+                        this.onGround = false;
+                        this.lastJumpTime = Date.now();
+                    }
+                    
+                    // Apply gravity
+                    this.vy += 0.5 * this.scaleY;
+                    
+                    // Update position
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    
+                    // Check collisions with platforms
+                    this.onGround = false;
+                    for (let platform of platforms) {
+                        if (this.x < platform.x + platform.width &&
+                            this.x + this.width > platform.x &&
+                            this.y < platform.y + platform.height &&
+                            this.y + this.height > platform.y) {
+                            
+                            const devilBottom = this.y + this.height;
+                            const devilTop = this.y;
+                            const platformTop = platform.y;
+                            const platformBottom = platform.y + platform.height;
+                            
+                            // Landing on top
+                            if (this.vy > 0 && devilBottom > platformTop && devilTop < platformTop) {
+                                this.y = platformTop - this.height;
+                                this.vy = 0;
+                                this.onGround = true;
+                                this.jumpsRemaining = 2;
+                            }
+                            // Hitting from below
+                            else if (this.vy < 0 && devilTop < platformBottom && devilBottom > platformBottom) {
+                                this.y = platformBottom;
+                                this.vy = 0;
+                            }
+                        }
+                    }
+                    
+                    // Keep devil in bounds
+                    if (this.x < 0) this.x = 0;
+                    if (this.x > p.width - this.width) this.x = p.width - this.width;
+                    
+                    // Respawn if fell off screen - resume chasing
+                    if (this.y > p.height) {
+                        // Find nearest platform to respawn on
+                        let nearestPlatform = null;
+                        let minDistance = Infinity;
+                        
+                        for (let platform of platforms) {
+                            const distance = Math.abs(platform.x - player.x);
+                            if (distance < minDistance) {
+                                minDistance = distance;
+                                nearestPlatform = platform;
+                            }
+                        }
+                        
+                        if (nearestPlatform) {
+                            this.x = nearestPlatform.x + nearestPlatform.width / 2;
+                            this.y = nearestPlatform.y - this.height;
+                            this.vx = 0;
+                            this.vy = 0;
+                            this.onGround = true;
+                            // Keep chasing state
+                        } else {
+                            this.respawn();
+                        }
+                    }
+                    
+                    // Check collision with player (but not when player is on goal platform)
+                    if (this.checkCollisionWithPlayer(player, platforms)) {
+                        return 'caught';
+                    }
+                }
+                
+                return null;
+            }
+            
+            checkCollisionWithPlayer(player, platforms) {
+                // Check if player is on the goal platform (safe zone)
+                const goalPlatform = platforms.find(platform => 
+                    platform.color[0] === 255 && platform.color[1] === 215 && platform.color[2] === 0
+                );
+                
+                if (goalPlatform) {
+                    // Check if player is standing on goal platform
+                    const playerOnGoal = player.x < goalPlatform.x + goalPlatform.width &&
+                                        player.x + player.width > goalPlatform.x &&
+                                        player.y + player.height >= goalPlatform.y &&
+                                        player.y + player.height <= goalPlatform.y + 10;
+                    
+                    // If player is on goal platform, they're safe
+                    if (playerOnGoal) {
+                        return false;
+                    }
+                }
+                
+                // Simple bounding box collision
+                return this.x < player.x + player.width &&
+                       this.x + this.width > player.x &&
+                       this.y < player.y + player.height &&
+                       this.y + this.height > player.y;
+            }
+            
+            respawn() {
+                this.x = this.targetX;
+                this.y = this.targetY;
+                this.vx = 0;
+                this.vy = 0;
+                this.state = 'waiting';
+            }
+            
+            reset() {
+                this.x = this.spawnX;
+                this.y = this.spawnY;
+                this.vx = 0;
+                this.vy = 0;
+                this.state = 'flying-in';
+                this.playerHasMoved = false;
+                this.hasLanded = false;
+                this.animationFrame = 0;
+            }
+            
+            draw() {
+                p.push();
+                p.translate(this.x + this.width/2, this.y);
+                p.scale(this.facing, 1);
+                
+                // Draw evil stick devil
+                p.stroke(139, 0, 0); // Dark red
+                p.strokeWeight(3 * this.scaleX);
+                p.strokeCap(p.ROUND);
+                
+                // Head (red)
+                p.fill(255, 0, 0);
+                p.circle(0, 10 * this.scaleY, 16 * this.scaleX);
+                
+                // Draw horns
+                p.stroke(139, 0, 0);
+                p.strokeWeight(2 * this.scaleX);
+                p.line(-6 * this.scaleX, 4 * this.scaleY, -9 * this.scaleX, 0);
+                p.line(6 * this.scaleX, 4 * this.scaleY, 9 * this.scaleX, 0);
+                
+                // Body
+                p.stroke(139, 0, 0);
+                p.strokeWeight(3 * this.scaleX);
+                p.line(0, 18 * this.scaleY, 0, 30 * this.scaleY);
+                
+                // Arms (animated)
+                let armSwing = p.sin(this.animationFrame * 0.3) * 0.3;
+                if (this.state === 'chasing' && p.abs(this.vx) > 0.1) {
+                    p.line(0, 22 * this.scaleY, (-8 + armSwing * 8) * this.scaleX, 28 * this.scaleY);
+                    p.line(0, 22 * this.scaleY, (8 - armSwing * 8) * this.scaleX, 28 * this.scaleY);
+                } else {
+                    // Reaching arms while waiting/flying
+                    p.line(0, 22 * this.scaleY, -8 * this.scaleX, 24 * this.scaleY);
+                    p.line(0, 22 * this.scaleY, 8 * this.scaleX, 24 * this.scaleY);
+                }
+                
+                // Legs (animated)
+                let legSwing = p.sin(this.animationFrame * 0.4) * 0.4;
+                if (this.state === 'chasing' && p.abs(this.vx) > 0.1 && this.onGround) {
+                    p.line(0, 30 * this.scaleY, (-6 + legSwing * 6) * this.scaleX, 40 * this.scaleY);
+                    p.line(0, 30 * this.scaleY, (6 - legSwing * 6) * this.scaleX, 40 * this.scaleY);
+                } else {
+                    p.line(0, 30 * this.scaleY, -4 * this.scaleX, 40 * this.scaleY);
+                    p.line(0, 30 * this.scaleY, 4 * this.scaleX, 40 * this.scaleY);
+                }
+                
+                // Evil eyes
+                p.fill(255, 255, 0); // Yellow eyes
+                p.noStroke();
+                p.circle(-3 * this.scaleX, 8 * this.scaleY, 4 * this.scaleX);
+                p.circle(3 * this.scaleX, 8 * this.scaleY, 4 * this.scaleX);
+                
+                // Evil pupils
+                p.fill(0);
+                p.circle(-3 * this.scaleX, 8 * this.scaleY, 2 * this.scaleX);
+                p.circle(3 * this.scaleX, 8 * this.scaleY, 2 * this.scaleX);
+                
+                // Draw tail with arrow
+                p.stroke(139, 0, 0);
+                p.strokeWeight(2 * this.scaleX);
+                const tailWiggle = p.sin(this.animationFrame * 0.2) * 3 * this.scaleX;
+                p.line(0, 30 * this.scaleY, tailWiggle - 5 * this.scaleX, 35 * this.scaleY);
+                p.line(tailWiggle - 5 * this.scaleX, 35 * this.scaleY, tailWiggle - 8 * this.scaleX, 38 * this.scaleY);
+                
+                // Arrow tip on tail
+                p.line(tailWiggle - 10 * this.scaleX, 36 * this.scaleY, tailWiggle - 8 * this.scaleX, 38 * this.scaleY);
+                p.line(tailWiggle - 8 * this.scaleX, 38 * this.scaleY, tailWiggle - 6 * this.scaleX, 36 * this.scaleY);
+                
+                p.pop();
+            }
+        }
+        
         p.setup = () => {
             // Calculate responsive canvas size
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -466,6 +818,12 @@ function createP5Game() {
             p.textSize(Math.max(16, 20 * Math.min(p.width/800, p.height/600)));
             p.text(`Level ${currentLevel}`, 10, 30);
             
+            // Draw version/build number in top right corner
+            p.fill(0, 0, 0, 128); // 50% transparent black
+            p.textAlign(p.RIGHT);
+            p.textSize(Math.max(10, 12 * Math.min(p.width/800, p.height/600)));
+            p.text('v1.0.b.0005', p.width - 10, 20);
+            
             for (let platform of platforms) {
                 platform.update(); // Update moving platforms
                 platform.draw();
@@ -474,8 +832,29 @@ function createP5Game() {
             // Update and draw player (only if level not complete)
             if (!levelComplete) {
                 player.update();
+                
+                // Update evil devil if it exists
+                if (evilDevil) {
+                    const devilResult = evilDevil.update(player, platforms, spawn);
+                    if (devilResult === 'caught') {
+                        // Player caught by devil - respawn both
+                        player.x = spawn.x;
+                        player.y = spawn.y;
+                        player.vx = 0;
+                        player.vy = 0;
+                        player.jumpsRemaining = 2;
+                        player.lastJumpKey = false;
+                        evilDevil.reset();
+                        console.log('Player caught by evil devil! Both respawning...');
+                    }
+                }
             }
             player.draw();
+            
+            // Draw evil devil after player
+            if (evilDevil) {
+                evilDevil.draw();
+            }
             
             // Draw level completion message and button
             if (showLevelComplete) {
