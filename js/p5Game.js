@@ -20,6 +20,7 @@ function createP5Game() {
         let goal = {x: 0, y: 0, width: 0, height: 0}; // Current level goal
         let spawn = {x: 0, y: 0}; // Current level spawn point
         let evilDevil = null; // Evil devil enemy
+        let devilEnabled = true; // Toggle for devil spawning
         
         // Load level function for p5.js
         function loadLevel(levelNumber) {
@@ -75,9 +76,9 @@ function createP5Game() {
             levelComplete = false;
             showLevelComplete = false;
             
-            // Spawn evil devil on level 2 and above
+            // Spawn evil devil on level 2 and above (only if enabled)
             evilDevil = null;
-            if (levelNumber >= 2) {
+            if (levelNumber >= 2 && devilEnabled) {
                 // Calculate spawn probability: 50% at level 2, increasing by 10% per level, capped at 100%
                 const spawnProbability = Math.min(1.0, 0.5 + (levelNumber - 2) * 0.1);
                 
@@ -624,7 +625,7 @@ function createP5Game() {
                     if (this.x < 0) this.x = 0;
                     if (this.x > p.width - this.width) this.x = p.width - this.width;
                     
-                    // Respawn if fell off screen - resume chasing
+                    // Respawn if fell off screen - only devil respawns, player stays
                     if (this.y > p.height) {
                         // Find nearest platform to respawn on
                         let nearestPlatform = null;
@@ -644,10 +645,13 @@ function createP5Game() {
                             this.vx = 0;
                             this.vy = 0;
                             this.onGround = true;
-                            // Keep chasing state
+                            console.log('Devil fell off screen! Respawning devil only...');
+                            // Keep chasing state - player is NOT affected
                         } else {
                             this.respawn();
+                            console.log('Devil fell off screen! Respawning devil to goal platform...');
                         }
+                        return null; // Return null to indicate player should NOT respawn
                     }
                     
                     // Check collision with player (but not when player is on goal platform)
@@ -822,7 +826,26 @@ function createP5Game() {
             p.fill(0, 0, 0, 128); // 50% transparent black
             p.textAlign(p.RIGHT);
             p.textSize(Math.max(10, 12 * Math.min(p.width/800, p.height/600)));
-            p.text('v1.0.b.0005', p.width - 10, 20);
+            p.text('v1.0.b.0007', p.width - 10, 20);
+            
+            // Draw devil toggle button below version
+            const toggleWidth = 80 * (p.width/800);
+            const toggleHeight = 20 * (p.height/600);
+            const toggleX = p.width - toggleWidth - 10;
+            const toggleY = 25;
+            
+            // Button background
+            p.fill(devilEnabled ? [200, 0, 0, 180] : [100, 100, 100, 180]);
+            p.stroke(0, 0, 0, 128);
+            p.strokeWeight(1);
+            p.rect(toggleX, toggleY, toggleWidth, toggleHeight, 3);
+            
+            // Button text
+            p.fill(255);
+            p.noStroke();
+            p.textAlign(p.CENTER, p.CENTER);
+            p.textSize(Math.max(8, 10 * Math.min(p.width/800, p.height/600)));
+            p.text(devilEnabled ? '👿 ON' : '👿 OFF', toggleX + toggleWidth/2, toggleY + toggleHeight/2);
             
             for (let platform of platforms) {
                 platform.update(); // Update moving platforms
@@ -918,6 +941,23 @@ function createP5Game() {
         };
         
         p.mousePressed = () => {
+            // Check devil toggle button click
+            const toggleWidth = 80 * (p.width/800);
+            const toggleHeight = 20 * (p.height/600);
+            const toggleX = p.width - toggleWidth - 10;
+            const toggleY = 25;
+            
+            if (p.mouseX >= toggleX && p.mouseX <= toggleX + toggleWidth &&
+                p.mouseY >= toggleY && p.mouseY <= toggleY + toggleHeight) {
+                devilEnabled = !devilEnabled;
+                console.log(`Devil spawning ${devilEnabled ? 'enabled' : 'disabled'}`);
+                // Remove devil if currently active and disabled
+                if (!devilEnabled && evilDevil) {
+                    evilDevil = null;
+                }
+                return; // Exit early to prevent other clicks
+            }
+            
             if (showLevelComplete) {
                 // Check if click is on button
                 const buttonWidth = 200 * (p.width/800);
